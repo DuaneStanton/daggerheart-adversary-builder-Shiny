@@ -8,7 +8,7 @@
 #
 
 library(shiny)
-#library(dplyr)
+library(dplyr)
 #library(tidyr)
 
 source("R/Supporting Functions and Code.R")
@@ -18,7 +18,7 @@ ui <- fluidPage(
 
     # Application title
     titlePanel("Adversary Builder"),
-
+    htmlOutput("use_note"),
     tabsetPanel(
       tabPanel("Start",
                tags$div(h4("Specify party size, challenge type, and adversary counts, then move to 'Customize'")),
@@ -33,12 +33,9 @@ ui <- fluidPage(
                                        "Tougher (add +2 to adversary damage rolls)",
                                        "Harder/longer"),
                            selected = "Regular"),
-               htmlOutput("warning_count"),
-               htmlOutput("adv_tally"),
-               numericInput("adv_total",
-                            label = "# adversaries", value = 1, step = 1, min = 1, width = "25%"),
-               selectInput("tier", "Select adversary tier", choices = c(1:4), 
+               selectInput("tier", "Select adversary tier", choices = tier_vals, 
                            selected = 1, multiple = FALSE, width = "25%"),
+               htmlOutput("adv_tally"),
                uiOutput("adv_counts", 
                         label = "Specify the # of adversaries by type"),
                htmlOutput("warning_battle_points"),
@@ -48,16 +45,20 @@ ui <- fluidPage(
                tags$div(h4("Customize details for your adversaries below, then move to 'Run'")),
                uiOutput("adv_spec")), ### USER SPECIFIES DIFFICULTY/HP/STRESS/THRESHOLDS/DAMAGE DICE/NAMES/MOTIVATIONS/???
       tabPanel("Run",
-               tags$div(h4("Use this panel to run adversaries in-app"))), ### USER-INTERACTIVE FOR RUNNING FROM SERVER
-      tabPanel("Obsidian format",
+               tags$div(h4("Use this panel to run adversaries in-app"))), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
+      tabPanel("Obsidian",
                tags$div(h4("Copy from this tab to Obsidian if runing adversaries there"))), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
-      tabPanel("Credits") ### CREDIT DAGGERHEART SRD AND RIGHTKNIGHTTOFIGHT
+      tabPanel("Credits",
+               htmlOutput("sources")) ### CREDIT DAGGERHEART SRD AND RIGHTKNIGHTTOFIGHT
       )
 )
 
 # Define server ================================================================
 server <- function(input, output) {
 
+  output$use_note <- renderText({
+    "<p>This application will <b>always</b> be provided for free - enjoy!</p>"
+  })
   ###
   ### TODO
   ###
@@ -69,31 +70,28 @@ server <- function(input, output) {
   ### - likely build out an 'internal functions' R script to organize things
   ### - work on aesthetics (hope & fear, baby!)
   
-  adv_names <- c("Bruiser", "Horde", "Leader", "Minion", "Ranged", "Skulk", "Solo", "Standard", "Support", "Social")
+  # server Start panel ---------------------------------------------------------
   adversary_lister <- function(inputId, label, choices = 0:input$adv_total, value = 0) {
     tags$div(selectInput(inputId, label, choices = choices, selected = value),
              style="display:inline-block")
   }
 
     output$adv_counts <- renderUI({
-    lapply(seq_along(adv_names), \(i) {
-      build_adv_count(typ = adv_names[i], chcs = 0:input$adv_total, val = 0)
-    })
+    lapply(seq_along(adv_types), \(i) { build_adv_count(typ = adv_types[i]) })
   })
-    
   
-  adv_rctv <- lapply(seq_along(adv_names), \(i) {
-    reactive({as.numeric(input[[paste0(adv_names[i], "_count")]])})
+  adv_rctv <- lapply(seq_along(adv_types), \(i) {
+    reactive({as.numeric(input[[paste0(adv_types[i], "_count")]])})
   })
-  names(adv_rctv) <- adv_names
+  names(adv_rctv) <- adv_types
   
   adv_ct_vec <- reactive({
     req(adv_rctv[[1]]())
     
-    v <- vapply(seq_along(adv_names), 
-                \(i){ as.numeric(input[[paste0(adv_names[i], "_count")]]) },
+    v <- vapply(seq_along(adv_types), 
+                \(i){ as.numeric(input[[paste0(adv_types[i], "_count")]]) },
                 numeric(1L))
-    names(v) <- adv_names
+    names(v) <- adv_types
     v
   })
   
@@ -103,12 +101,6 @@ server <- function(input, output) {
     req(adv_rctv[[1]]())
     sum(adv_ct_vec())
     })
-  
-  output$warning_count <- renderText({
-    if (adv_total() > input$adv_total) {
-      "<p style ='color: red'><b><i>Adversary total > '# adversaries'</i></b></p>"
-    }
-  })
   
   output$adv_tally <- renderText({
     paste0("<p style ='color: blue'><b><i>Adversary total: ", adv_total(), "</i></b></p>")
@@ -160,6 +152,7 @@ server <- function(input, output) {
   ### WORKING CODE ABOVE HERE, IN-DEVELOPMENT CODE BELOW
   ###
 
+  # server Customize panel -----------------------------------------------------
   output$adv_spec <-
     renderUI({
       req(active_adv_ct_vec())
@@ -182,7 +175,16 @@ server <- function(input, output) {
   ### CREATE MULTIPLE SETS TO APPLY FOR EACH TYPE AND ALLOW USER TO CHECK BOX FOR RANDOMIZED
     })
   
+  # server Run panel -----------------------------------------------------------
   
+  # server Obsidian panel ------------------------------------------------------
+  
+  # server Credits panel -------------------------------------------------------
+  output$sources <- 
+    renderText({
+      tags$div("<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>")
+      tags$div("<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>")
+    })
 }
 
 # Run the application 
