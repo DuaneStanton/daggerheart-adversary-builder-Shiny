@@ -18,6 +18,42 @@ ui <- fluidPage(
 
     # Application title
     titlePanel("Adversary Builder"),
+    tags$head(tags$style(".form-group {
+                       margin-bottom: 10px !important;
+                       width:  100%;
+                       }
+                       .form-group.shiny-input-container {
+                       width: 80%;
+                       }
+                       .form-group.shiny-input-radiogroup {
+                       display: table-row;
+                       }
+                       .form-inline .form-control {
+                       width: 100%;
+                       }
+                       .shiny-split-layout {
+                       width: 70%;
+                       overflow: visible;
+                       }
+                       .col-sm-12 {
+                       height: 120px;
+                       margin: 0;
+                       padding-top: -30px;
+                       }
+                       .fluidRow {
+                       margin: 0;
+                       }
+                       .bottom-aligned {
+                       display: flex;
+                       align-items: flex-end;
+                       column-gap: 20px;
+                       margin: auto;
+                       height: 110px;
+                       }
+                       .bottom-aligned > div {
+                       flex-grow: 1;
+                       }
+                       ")),
     htmlOutput("use_note"),
     tabsetPanel(
       tabPanel("Start",
@@ -57,7 +93,7 @@ ui <- fluidPage(
 server <- function(input, output) {
 
   output$use_note <- renderText({
-    "<p>This application will <b>always</b> be provided for free - enjoy!</p>"
+    "<p>Custom adversary builder using RightKnighttoFight's Guide (see Credit tab)</p>"
   })
   ###
   ### TODO
@@ -87,7 +123,6 @@ server <- function(input, output) {
   
   adv_ct_vec <- reactive({
     req(adv_rctv[[1]]())
-    
     v <- vapply(seq_along(adv_types), 
                 \(i){ as.numeric(input[[paste0(adv_types[i], "_count")]]) },
                 numeric(1L))
@@ -95,7 +130,7 @@ server <- function(input, output) {
     v
   })
   
-  active_adv_ct_vec <- reactive({ adv_ct_vec()[adv_ct_vec() > 0] })
+  active_adv_ct_vec <- reactive({adv_ct_vec()[adv_ct_vec() > 0]})
   
   adv_total <- reactive({
     req(adv_rctv[[1]]())
@@ -160,13 +195,8 @@ server <- function(input, output) {
 
     lapply(seq_along(active_adv_ct_vec()), \(i) {
       lapply(1:active_adv_ct_vec()[i], \(j) {
-        
-        typ_ <- names(active_adv_ct_vec())[i]
-        tier <- input$tier
-        
         output[[i]] <- tagList()
-        output[[i]][[j]] <- build_adv_ui(typ_, j, tier)
-        
+        output[[i]][[j]] <- build_adv_ui_1(input, names(active_adv_ct_vec())[i], j, input$tier)
         output
       })
     })
