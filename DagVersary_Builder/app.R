@@ -15,49 +15,46 @@ source("R/Supporting Functions and Code.R")
 
 # Define UI ====================================================================
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Adversary Builder"),
-    tags$head(tags$style(".form-group {
-                       margin-bottom: 10px !important;
-                       width:  100%;
-                       }
-                       .form-group.shiny-input-container {
-                       width: 80%;
-                       }
-                       .form-group.shiny-input-radiogroup {
-                       display: table-row;
-                       }
-                       .form-inline .form-control {
-                       width: 100%;
-                       }
-                       .shiny-split-layout {
-                       width: 70%;
-                       overflow: visible;
-                       }
-                       .col-sm-12 {
-                       height: 120px;
-                       margin: 0;
-                       padding-top: -30px;
-                       }
-                       .fluidRow {
-                       margin: 0;
-                       }
-                       .bottom-aligned {
-                       display: flex;
-                       align-items: flex-end;
-                       column-gap: 20px;
-                       margin: auto;
-                       height: 110px;
-                       }
-                       .bottom-aligned > div {
-                       flex-grow: 1;
-                       }
-                       ")),
+    titlePanel("Daggerheart Adversary Builder"),
+    tags$head(tags$style("
+    .adv-count-sel {
+      width: 100px;
+    }
+    .adv-input {
+      border: 4px solid #320e45;
+      background: #7d4e7d;
+      color: #eddb9d;
+      padding-left: 10px;
+      padding-bottom: 20px;
+    }
+    .form-control {
+      background: #efefef
+    }
+    .selectize-input.full.has-items.has-options {
+      background: #f2efce
+    }
+    .form-group {
+      margin-bottom: 10px !important;
+      width: 100%;
+    }
+    .form-group.shiny-input-container {
+      width: 100%;
+      padding-right: 10px;
+      outline-width: 20px;
+    }
+    .bottom-aligned {
+      display: flex;
+      align-items: flex-end;
+      column-gap: 10px;
+    }
+    .bottom-aligned > div {
+      flex-grow: 1;
+    }
+    ")),
     htmlOutput("use_note"),
     tabsetPanel(
       tabPanel("Start",
-               tags$div(h4("Specify party size, challenge type, and adversary counts, then move to 'Customize'")),
+               tags$div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
                numericInput("party_total",
                             label = "# party members", value = 4, step = 1, min = 1, width = "25%"),
                selectInput("fight_type",
@@ -79,7 +76,7 @@ ui <- fluidPage(
                ),
       tabPanel("Customize",
                tags$div(h4("Customize details for your adversaries below, then move to 'Run'")),
-               uiOutput("adv_spec")), ### USER SPECIFIES DIFFICULTY/HP/STRESS/THRESHOLDS/DAMAGE DICE/NAMES/MOTIVATIONS/???
+               uiOutput("adv_spec")), 
       tabPanel("Run",
                tags$div(h4("Use this panel to run adversaries in-app"))), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian",
@@ -107,12 +104,7 @@ server <- function(input, output) {
   ### - work on aesthetics (hope & fear, baby!)
   
   # server Start panel ---------------------------------------------------------
-  adversary_lister <- function(inputId, label, choices = 0:input$adv_total, value = 0) {
-    tags$div(selectInput(inputId, label, choices = choices, selected = value),
-             style="display:inline-block")
-  }
-
-    output$adv_counts <- renderUI({
+  output$adv_counts <- renderUI({
     lapply(seq_along(adv_types), \(i) { build_adv_count(typ = adv_types[i]) })
   })
   
@@ -196,7 +188,9 @@ server <- function(input, output) {
     lapply(seq_along(active_adv_ct_vec()), \(i) {
       lapply(1:active_adv_ct_vec()[i], \(j) {
         output[[i]] <- tagList()
-        output[[i]][[j]] <- build_adv_ui_1(input, names(active_adv_ct_vec())[i], j, input$tier)
+        output[[i]][[j]] <- 
+          div(class = "adv-input",
+              build_adv_ui_1(input, names(active_adv_ct_vec())[i], j, input$tier) )
         output
       })
     })

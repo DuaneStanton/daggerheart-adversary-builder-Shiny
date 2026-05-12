@@ -13,7 +13,7 @@ distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 ### ADD TOOLTIP WITH BRIEF OVERVIEW OF TYPE???
 ###
 build_adv_count <- function(typ) {
-  tags$div(
+  tags$div(class = "adv-count-sel",
   numericInput(inputId = paste0(typ, "_count"), label = paste0("# ", typ, "s"),
                value = 0, min = 0, step = 1),
   style="display:inline-block")
@@ -92,72 +92,81 @@ textify <- function(typ, num, detail, placehold, wd = NULL) {
   textInput(inputId = namify(typ, num, detail), label = NULL, placeholder = placehold, width = wd)
 }
 
-numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol) {
+numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px", inpwd = NULL) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
-  tags$div(title = recommend_range(df_, tier, type, detail), style = "width: 80px",#"white-space: pre-line",
-            numericInput(inputId = namify(type, nbr, detail),
-                         label = lbltxt,
-                         value = df__[[valcol]]))
+  div(title = recommend_range(df_, tier, type, detail), style = paste0("width: ", divwd),#"white-space: pre-line",
+      numericInput(inputId = namify(type, nbr, detail),
+                   label = lbltxt,
+                   value = df__[[valcol]],
+                   width = inpwd))
 }
 
 dmg_dice_pooler <- function(df_, tier, type, nbr, detail) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
-  tags$div(title = "Select higher constant for more consistency, or high dice-s-de for more swinginess",
-           style = "width: 130px;",
-           selectInput(inputId = namify(type, nbr, detail),
-                       label = "Damage dice",
-                       choices = c(unlist(df__$dice_pool_lst), "Use Avg instead")))
+  div(title = "Select higher constant for more consistency, or high dice-s-de for more swinginess",
+      style = "width: 120px;",
+      selectInput(inputId = namify(type, nbr, detail),
+                  label = "Damage dice",
+                  choices = c(unlist(df__$dice_pool_lst), "Use Avg")))
 }
 
+featurize <- function(type, num, detail_nbr) {
+  dtl_ftnm <- paste0("featname_", detail_nbr)
+  dtl_fttyp <- paste0("feattype_", detail_nbr)
+  dtl_ftdsc <- paste0("feattext_", detail_nbr)
+  fluidRow(
+    column(width = 12,
+           div(class = "bottom-aligned",
+               div(textify(type, num, dtl_ftnm, "Feature name", "180px")),
+               div(selectInput(namify(type, num, dtl_fttyp), label = "Feature type", choices = c("Passive", "Action", "Reaction"), width = "110px")),
+               div(textify(type, num, dtl_ftdsc, "Feature description", "420px")) ))
+    )
+}
 
 # styl_fr <- "width = 100px; height: 130px; display: inline-block; vertical-align: bottom"
 # styl_fr2 <- "width = 150px; height: 130px; display: inline-block; vertical-align: bottom"
 
 build_adv_ui_1 <- function(inpt, typ, num, tr) {
-  ###renderUI({
-    # Name (Tier / Type)
-    # Brief desc
-    # Motive(s)
-    # Difficulty / Thresholds / ATK / Weapon: Range (_ dice __dmg typ)
-    # HP / Stress
-    # Experience
-    # Features
-
-    tags$div(
-      h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
-      textify(typ, num, "name", paste0(typ, "_", num, " (name)")),
-      textify(typ, num, "desc", "A brief description of the adversary"),
-      textify(typ, num, "mottac1", "Motive/tactic 1"),
-      textify(typ, num, "mottac2", "Motive/tactic 2"),
-      textify(typ, num, "mottac3", "Motive/tactic 3"),
+   div(
+     h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
+     textify(typ, num, "name", paste0(typ, "_", num, " (name)"), "250px"),
+     textify(typ, num, "desc", "A brief description of the adversary", "400px"),
+     textify(typ, num, "mottac1", "Motive/tactic 1", "200px"),
+     textify(typ, num, "mottac2", "Motive/tactic 2", "200px"),
+     textify(typ, num, "mottac3", "Motive/tactic 3", "200px"),
       ###
       ### ALLOW USER TO CHECK A BOX FOR 'AVG DMG' (STATIC #) OR 'DICE DMG' (DROPDOWN SEL)??
       ### NOTE: +2 OR +1d4 SHOULD BE APPLICABLE FOR -EITHER-
       ###
       ### LET USER CHECK A BOX TO MODIFY DICE # / DICE SIDE # / ATK + ???
-      fluidRow(
-        column(width = 12, 
-               div(class = "bottom-aligned",
-                   div(numerify(adv_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
-                   div(numerify(adv_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md")), 
-                   div(numerify(adv_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md")),
-                   div(numerify(adv_ref_df, tr, typ, num, "hp", "HP", "hp_md")),
-                   div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md")) )
-        )),
-      fluidRow(
-        column(width = 12, 
-               div(class = "bottom-aligned",
-                   div(numerify(adv_ref_df, tr, typ, num, "atk", "ATK", "atk_md")),
-                   div(textify(typ, num, "wpn", "Weapon", "140px")),
-                   div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
-                   dmg_dice_pooler(adv_ref_df, tr, typ, num, "dmg_dice"),
-                   numerify(adv_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md"),
-                   div(selectInput(namify(typ, num, "dmgtyp"), label = "Damage type", choices = c("phy", "mag"), width = "100px")) )
-        )),
-      textify(typ, num, "exp", "Experience(s)"), ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
-      ### RESUME HERE: TEXT FOR FEATURE NAME AND ANOTHER FOR FEATURE DETAIL
-      ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
-                   
+     fluidRow(
+       column(width = 12, offset = 0,
+              div(class = "bottom-aligned",
+                  div(numerify(adv_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
+                  div(numerify(adv_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
+                  div(numerify(adv_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
+                  div(numerify(adv_ref_df, tr, typ, num, "hp", "HP", "hp_md", "60px", "60px")),
+                  div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")) )
+       )),
+     fluidRow(
+       column(width = 12, offset = 0,
+              div(class = "bottom-aligned",
+                  div(numerify(adv_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
+                  div(textify(typ, num, "wpn", "Weapon", "140px")),
+                  div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
+                  dmg_dice_pooler(adv_ref_df, tr, typ, num, "dmg_dice"),
+                  numerify(adv_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
+                  div(selectInput(namify(typ, num, "dmgtyp"), label = "Damage type", choices = c("phy", "mag", "phy & mag"), width = "120px")) )
+       )),
+     textify(typ, num, "exp", "Experience(s)", "350px"),
+     ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
+     ### RESUME HERE: TEXT FOR FEATURE NAME AND ANOTHER FOR FEATURE DETAIL
+     ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
+     featurize(typ, num, 1),
+     featurize(typ, num, 2),
+     featurize(typ, num, 3),
+     featurize(typ, num, 4),
+     featurize(typ, num, 5)
     )
     # renderText({
     #   paste0("<p><b>")
