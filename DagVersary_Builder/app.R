@@ -54,9 +54,9 @@ ui <- fluidPage(
     htmlOutput("use_note"),
     tabsetPanel(
       tabPanel("Start",
-               tags$div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
+               div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
                numericInput("party_total",
-                            label = "# party members", value = 4, step = 1, min = 1, width = "25%"),
+                            label = "# party members", value = 4, step = 1, min = 1, width = "140px"),
                selectInput("fight_type",
                            label = "Challenge", 
                            choices = c("Regular",
@@ -65,9 +65,9 @@ ui <- fluidPage(
                                        "Tougher (add +1d4 to adversary damage rolls)",
                                        "Tougher (add +2 to adversary damage rolls)",
                                        "Harder/longer"),
-                           selected = "Regular"),
+                           selected = "Regular", width = "350px"),
                selectInput("tier", "Select adversary tier", choices = tier_vals, 
-                           selected = 1, multiple = FALSE, width = "25%"),
+                           selected = 1, multiple = FALSE, width = "150px"),
                htmlOutput("adv_tally"),
                uiOutput("adv_counts", 
                         label = "Specify the # of adversaries by type"),
@@ -75,12 +75,15 @@ ui <- fluidPage(
                htmlOutput("battle_points")
                ),
       tabPanel("Customize",
-               tags$div(h4("Customize details for your adversaries below, then move to 'Run'")),
+               div(h4("Customize details for your adversaries below, then move to 'Run'")),
+               htmlOutput("dmg_note"),
                uiOutput("adv_spec")), 
       tabPanel("Run",
-               tags$div(h4("Use this panel to run adversaries in-app"))), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
+               div(h4("Use this panel to run adversaries in-app")),
+               uiOutput("adv_run")), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
+      
       tabPanel("Obsidian",
-               tags$div(h4("Copy from this tab to Obsidian if runing adversaries there"))), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+               div(h4("Copy from this tab to Obsidian if runing adversaries there"))), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
       tabPanel("Credits",
                htmlOutput("sources")) ### CREDIT DAGGERHEART SRD AND RIGHTKNIGHTTOFIGHT
       )
@@ -100,7 +103,6 @@ server <- function(input, output) {
   ### - workout Obsidian-friendly copy-able formatted tab (LIKELY FUNCTION)
   ### - add validation checks
   ### - incorporate 'add +1d4 to dmg roll' and 'add static +2 to dmg roll' in rendered damage dice for each 'result' tab
-  ### - likely build out an 'internal functions' R script to organize things
   ### - work on aesthetics (hope & fear, baby!)
   
   # server Start panel ---------------------------------------------------------
@@ -178,8 +180,21 @@ server <- function(input, output) {
   ###
   ### WORKING CODE ABOVE HERE, IN-DEVELOPMENT CODE BELOW
   ###
-
+  
   # server Customize panel -----------------------------------------------------
+  dmg_add <- reactive({
+    if (input$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {"+1d4"
+    } else if (input$fight_type == "Tougher (add +2 to adversary damage rolls)") {"+2"
+    } else {"none"}
+  })
+  
+  output$dmg_note <- renderText({
+    if (dmg_add() %in% c("+1d4", "+2")) {
+      paste("<h3>Because you specified adding", dmg_add(), 
+            "to damage rolls, the 'Run' and 'Obsidian' tabs will include that for each adversary</h3>")
+    } else {""}
+  })
+  
   output$adv_spec <-
     renderUI({
       req(active_adv_ct_vec())
@@ -190,24 +205,39 @@ server <- function(input, output) {
         output[[i]] <- tagList()
         output[[i]][[j]] <- 
           div(class = "adv-input",
-              build_adv_ui_1(input, names(active_adv_ct_vec())[i], j, input$tier) )
+              build_adv_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
         output
       })
     })
-            
   ### NEED TO CREATE TEMPLATE FOR TYPE-APPROPRIATE MOTIVE/TACTIC DEFAULTS
   ### CREATE MULTIPLE SETS TO APPLY FOR EACH TYPE AND ALLOW USER TO CHECK BOX FOR RANDOMIZED
     })
   
   # server Run panel -----------------------------------------------------------
+  output$adv_run <- 
+    renderUI({
+      req(active_adv_ct_vec())
+      output = tagList()
+      
+      lapply(seq_along(active_adv_ct_vec()), \(i) {
+        lapply(1:active_adv_ct_vec()[i], \(j) {
+          output[[i]] <- tagList()
+          output[[i]][[j]] <- 
+            div(class = "adv-run",
+                build_adv_run_ui(input, names(active_adv_ct_vec())[i], j, input$tier) )
+          output
+        })
+      })
+    })
+  
   
   # server Obsidian panel ------------------------------------------------------
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
     renderText({
-      tags$div("<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>")
-      tags$div("<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>")
+      div("<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>")
+      div("<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>")
     })
 }
 

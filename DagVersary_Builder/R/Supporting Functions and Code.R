@@ -68,12 +68,6 @@ recommend_range <- function(x, tier, typ, colnm) {
 # build uiOutput as-needed for adversaries -------------------------------------
 namify <- function(type, num, detail){paste0(type, "_", num, "_", detail)}
 
-# setwidth <- function(type, num, detail, wd_pct=120){
-#   tags$head(tags$style(type="text/css", 
-#                        paste0("#", namify(type, num, detail), "{width:", wd_pct, "%;}"))
-#             )
-# }
-
 ###
 # .tooltiptext {
 #   visibility: hidden; /* Hidden by default */
@@ -123,10 +117,8 @@ featurize <- function(type, num, detail_nbr) {
     )
 }
 
-# styl_fr <- "width = 100px; height: 130px; display: inline-block; vertical-align: bottom"
-# styl_fr2 <- "width = 150px; height: 130px; display: inline-block; vertical-align: bottom"
-
-build_adv_ui_1 <- function(inpt, typ, num, tr) {
+# UI for Customize tab per adversary -------------------------------------------
+build_adv_spec_ui <- function(typ, num, tr) {
    div(
      h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
      textify(typ, num, "name", paste0(typ, "_", num, " (name)"), "250px"),
@@ -134,11 +126,6 @@ build_adv_ui_1 <- function(inpt, typ, num, tr) {
      textify(typ, num, "mottac1", "Motive/tactic 1", "200px"),
      textify(typ, num, "mottac2", "Motive/tactic 2", "200px"),
      textify(typ, num, "mottac3", "Motive/tactic 3", "200px"),
-      ###
-      ### ALLOW USER TO CHECK A BOX FOR 'AVG DMG' (STATIC #) OR 'DICE DMG' (DROPDOWN SEL)??
-      ### NOTE: +2 OR +1d4 SHOULD BE APPLICABLE FOR -EITHER-
-      ###
-      ### LET USER CHECK A BOX TO MODIFY DICE # / DICE SIDE # / ATK + ???
      fluidRow(
        column(width = 12, offset = 0,
               div(class = "bottom-aligned",
@@ -160,7 +147,6 @@ build_adv_ui_1 <- function(inpt, typ, num, tr) {
        )),
      textify(typ, num, "exp", "Experience(s)", "350px"),
      ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
-     ### RESUME HERE: TEXT FOR FEATURE NAME AND ANOTHER FOR FEATURE DETAIL
      ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
      featurize(typ, num, 1),
      featurize(typ, num, 2),
@@ -168,8 +154,88 @@ build_adv_ui_1 <- function(inpt, typ, num, tr) {
      featurize(typ, num, 4),
      featurize(typ, num, 5)
     )
-    # renderText({
-    #   paste0("<p><b>")
-    # })
-  ###})
+}
+
+# UI for Run tab per adversary -------------------------------------------------
+list_adv_name <- function(inpt, typ, num, tr) {
+  nm <- reactive({inpt[[namify(typ, num, "name")]]})
+  paste0("<b><Big>", ifelse(nm() == "", "Adversary", nm()), "</Big></b> (T", tr, " ", typ, ")</p>")
+}
+
+list_adv_desc <- function(inpt, typ, num) {
+  dsc <- reactive({inpt[[namify(typ, num, "desc")]]})
+  paste0(ifelse(dsc() == "","The most foul, cruel, and bad-tempered rodent you ever set eyes on", dsc()))
+}
+
+list_motives_tactics <- function(inpt, typ, num) {
+  mt1 <- reactive({inpt[[namify(typ, num, "mottac1")]]})
+  mt2 <- reactive({inpt[[namify(typ, num, "mottac2")]]})
+  mt3 <- reactive({inpt[[namify(typ, num, "mottac3")]]})
+  
+  if (any(mt1() != "", mt2() != "", mt3() != "")) {
+    fluidRow(paste0("Motives and tactics: ", 
+                    paste(ifelse(mt1() != "", mt1(), "_drop_"), 
+                          ifelse(mt2() != "", mt2(), "_drop_"),
+                          ifelse(mt3() != "", mt3(), "_drop_"), sep = ", ") |> 
+                      gsub(pattern = " ,|_drop_,|, _drop_|,$", replacement = "")))
+  }
+}
+
+list_stats_1 <- function(inpt, typ, num) {
+  
+  atk_txt <- reactive({ifelse(inpt[[namify(typ, num, "atk")]] > -1, 
+                              paste0("+", inpt[[namify(typ, num, "atk")]]),
+                              inpt[[namify(typ, num, "atk")]])})
+  
+  wpn_txt_lbl <- reactive({paste0(inpt[[namify(typ, num, "wpn")]], ": ",
+                                  inpt[[namify(typ, num, "rng")]])})
+  
+  # wpn_txt <- reactive({
+  #   if (inpt[[namify(typ, num, "atk")]])
+  # })
+  
+  dice_dmg <- reactive({
+    if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
+      paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+    } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
+               inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
+      dmg_end <- sub(".+d(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+      dmg_str <- sub("(.+d).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+      paste0(dmg_str, as.numeric(dmg_end) + 2)
+    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    })
+  
+  avg_dmg <- reactive({
+    if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
+      paste(inpt[[namify(typ, num, "dmg_avg")]], "+1d4")
+    } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)") {
+      inpt[[namify(typ, num, "dmg_avg")]] + 2
+    } else {inpt[[namify(typ, num, "dmg_avg")]]}
+    })
+  
+  df_ <- reactive({
+    data.frame(diff = inpt[[namify(typ, num, "diff")]],
+               thrsh = paste(inpt[[namify(typ, num, "thresh_maj")]], "/", 
+                             inpt[[namify(typ, num, "thresh_sev")]]),
+               atk = atk_txt(),
+               wpn = if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg()} else {dice_dmg()})
+  })
+  
+  renderTable({df_()})
+}
+
+list_diff <- function(inpt, typ, num) {
+  div(renderUI({HTML(paste0("<BIG>", inpt[[namify(typ, num, "diff")]], "</BIG>")) }), 
+      style="text-align:center")
+}
+
+
+build_adv_run_ui <- function(inpt, typ, num, tr, dmg_add) {
+  column(width = 5,
+    fluidRow(renderUI({HTML(list_adv_name(inpt, typ, num, tr))})),
+    fluidRow(list_adv_desc(inpt, typ, num)),
+    list_motives_tactics(inpt, typ, num),
+    fluidRow(list_diff(inpt, typ, num)),
+    fluidRow(list_stats_1(inpt, typ, num))### RESUME HERE (OR WORK THEREON ABOVE)
+  )
 }
