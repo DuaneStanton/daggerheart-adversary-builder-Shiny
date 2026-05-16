@@ -50,7 +50,7 @@ calc_midpt <- function(x){
 adv_ref_df <- 
   read.csv("dagversary_stats_reference.csv") |> 
   mutate(
-    across(.cols = c(ends_with("_rng"), minion_pasv), .fns = calc_midpt, .names = "{.col}_md"),
+    across(.cols = ends_with("_rng"), .fns = calc_midpt, .names = "{.col}_md"),
   )
 md_cols_idx <- grep("_rng_md", colnames(adv_ref_df))
 colnames(adv_ref_df)[md_cols_idx] <- sub("_rng", "", colnames(adv_ref_df)[md_cols_idx])
@@ -61,34 +61,20 @@ adv_ref_df$dice_pool_lst <-
 
 # customize tooltip for recommended difficulty range ---------------------------
 recommend_range <- function(x, tier, typ, colnm) {
-  paste("Recommended range:",
-        x[[paste0(colnm, "_rng")]][x$tier == tier & x$adv_type == typ])
+  paste("Recommended range:", x[[colnm]][x$tier == tier & x$adv_type == typ])
 }
 
 # build uiOutput as-needed for adversaries -------------------------------------
 namify <- function(type, num, detail){paste0(type, "_", num, "_", detail)}
 
-###
-# .tooltiptext {
-#   visibility: hidden; /* Hidden by default */
-#     width: 130px;
-#   background-color: black;
-#   color: #ffffff;
-#     text-align: center;
-#   padding: 5px 0;
-#   border-radius: 6px;
-#   position: absolute;
-#   z-index: 1; /* Ensure tooltip is displayed above content */
-# }
-###
-
-textify <- function(typ, num, detail, placehold, wd = NULL) {
-  textInput(inputId = namify(typ, num, detail), label = NULL, placeholder = placehold, width = wd)
+textify <- function(typ, num, detail, placehold, wd = NULL, val = "") {
+  textInput(inputId = namify(typ, num, detail), label = NULL, value = val, placeholder = placehold, width = wd)
 }
 
 numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px", inpwd = NULL) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
-  div(title = recommend_range(df_, tier, type, detail), style = paste0("width: ", divwd),#"white-space: pre-line",
+  div(title = recommend_range(df_, tier, type, paste0(detail, "_rng")), 
+      style = paste0("width: ", divwd),
       numericInput(inputId = namify(type, nbr, detail),
                    label = lbltxt,
                    value = df__[[valcol]],
@@ -97,7 +83,7 @@ numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px
 
 dmg_dice_pooler <- function(df_, tier, type, nbr, detail) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
-  div(title = "Select higher constant for more consistency, or high dice-s-de for more swinginess",
+  div(title = "Select higher constant for more consistency, or high dice-side for more swinginess",
       style = "width: 120px;",
       selectInput(inputId = namify(type, nbr, detail),
                   label = "Damage dice",
@@ -118,6 +104,9 @@ featurize <- function(type, num, detail_nbr) {
 }
 
 # UI for Customize tab per adversary -------------------------------------------
+###
+### MORE HERE: NEED HIDDEN-UNLESS MINION MINION PASSIVE WITH TOOLTIP ()
+###
 build_adv_spec_ui <- function(typ, num, tr) {
    div(
      h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
@@ -133,7 +122,8 @@ build_adv_spec_ui <- function(typ, num, tr) {
                   div(numerify(adv_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
                   div(numerify(adv_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
                   div(numerify(adv_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
-                  div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")) )
+                  div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")),
+                  if (typ == "Minion"){div(numerify(adv_ref_df, tr, typ, num, "minion_pasv", "Minion Passive", "minion_pasv_md", "120px", "120px"))})
        )),
      fluidRow(
        column(width = 12, offset = 0,
@@ -159,7 +149,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
 # UI for Run tab per adversary -------------------------------------------------
 list_adv_name <- function(inpt, typ, num, tr) {
   nm <- reactive({inpt[[namify(typ, num, "name")]]})
-  paste0("<b><Big>", ifelse(nm() == "", "Adversary", nm()), "</Big></b> (T", tr, " ", typ, " \u0023", num, ")</p>")
+  paste0("<b><span style=font-size: 2em;>", ifelse(nm() == "", "Adversary", nm()), "</spanp></b><span> (T", tr, " ", typ, " \u0023", num, ")</span>")
 }
 
 list_adv_desc <- function(inpt, typ, num) {
@@ -201,9 +191,9 @@ list_stats_1 <- function(inpt, typ, num) {
       paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
                inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-      dmg_end <- sub(".+d(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
-      dmg_str <- sub("(.+d).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
-      paste0(dmg_str, as.numeric(dmg_end) + 2)
+      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
+      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+      paste0(dmg_str, (dmg_end + 2))
     } else {inpt[[namify(typ, num, "dmg_dice")]]}
     })
   
@@ -232,7 +222,7 @@ msg_hp_stress <- function(inpt, typ, num) {
   msg <- reactive({
     if (inpt[[namify(typ, num, "stress_run")]] == 0 & inpt[[namify(typ, num, "hp_run")]] > 0) {
       "<p style ='color: green; text-align: center'><b>Fully stressed! Now <i>vulnerable</i> and any incurred stress reduces HP by 1.</b></p>"
-    } else if (inpt[[namify(typ, num, "hp_run")]] == 0) {"<p style ='color: red; text-align: center'><b>DEFEATED!</b></p>"}
+    } else if (inpt[[namify(typ, num, "hp_run")]] == 0) {"<p style ='color: #ff175b; text-align: center'><BIG><b>DEFEATED!</b></BIG></p>"}
   })
   
   renderUI(HTML(msg()))
@@ -287,7 +277,7 @@ process_feature <- function(inpt, typ, num, ftrnum) {
     }
   })
   
-  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), feattxt())}
+  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), feattxt())} else {""}
 }
 
 classify_feattyp <- function(inpt, typ, num, ftrnum) {
@@ -317,22 +307,7 @@ list_features <- function(inpt, typ, num) {
         )
       x <- x[x$typval > 0,]
       x <- x[order(x$typval),]
-      #idx <- x$idx
-      
-      ###
-      ### RESUME HERE NEED TROUBLESHOOT HERE WHEN MULTIPLE ENTRIES
-      ###
-      # paste(
-      #   unlist(
-      #    lapply(1:length(idx), \(z) {process_feature(inpt, typ, num, idx)})
-      #   ),
-      #   collapse = "<br>"
-      # )
-      
-      
-      
-      # vapply(1:length(idx), \(z) {process_feature(inpt, typ, num, idx)}, character(1L)) |> 
-      #   paste(collapse = "<br>")
+      paste(x$txt, collapse = "<br>---<br>")
     }
   })
   if (!is.null(feat_list())) {
@@ -341,20 +316,28 @@ list_features <- function(inpt, typ, num) {
 }
 
 build_adv_run_ui <- function(inpt, typ, num, tr, dmg_add) {
-  column(width = 5,
+  div(
     fluidRow(renderUI({HTML(list_adv_name(inpt, typ, num, tr))})),
     fluidRow(list_adv_desc(inpt, typ, num)),
     list_motives_tactics(inpt, typ, num),
     fluidRow(list_stats_1(inpt, typ, num)),
     fluidRow(msg_hp_stress(inpt, typ, num)),
     fluidRow(
-      column(width = 2),
-      column(width = 4,
+      column(width = 6,
              div(selectInput(namify(typ, num, "hp_run"), label = "HP", choices = c(0:inpt[[namify(typ, num, "hp")]]), selected = inpt[[namify(typ, num, "hp")]], width = "70px"))),
       column(width = 6,
-             div(selectInput(namify(typ, num, "stress_run"), label = "Stress", choices = c(0:inpt[[namify(typ, num, "stress")]]), selected = inpt[[namify(typ, num, "stress")]], width = "70px")))
+             div(selectInput(namify(typ, num, "stress_run"), label = "Stress", choices = c(0:inpt[[namify(typ, num, "stress")]]), selected = inpt[[namify(typ, num, "stress")]], width = "70px"))),
     ),
-    fluidRow(list_features(inpt, typ, num)) ###
-    ### RESUME HERE - ADD STATUS (SELECT MULTIPLE PERMITTED, INCLUDE 'DEFEATED!' WHICH IS AUTO-SELECTED WHEN hp_run == 0)
-  )
+    fluidRow(list_features(inpt, typ, num)),
+    fluidRow(div(class="inline", title = "Hidden: rolls against have disadvantage; Restrained: can't move, can take actions; Vulnerable: all rolls against have advantage", 
+                 checkboxGroupInput(namify(typ, num, "conds"), label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable"), inline = TRUE))),
+    fluidRow(textify(typ, num, "custom_cond", placehold = "Type custom conditions here", ))
+    )
+  
+  ###
+  ### HERE OR IN app.R, NEED TO BUILD IN TO FEATURES FOR KEY TYPES:
+  ### - {for Minion} Minion ({minion pasv val here}) - Passive: The {Minion} is defeated when they take any damage. For every {minion pasv val here} damage a PC deals to the {Minion}, defeat an additional Minion within range the attack would succeed against.
+  ### - {for Minion} Group Attack - Action: Spend a Fear to choose a target and spotlight all {Minions} within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal {dmg} physical damage each. Combine this damage.
+  ### - {for Horde} Horde ({half dmg, OR lesser of down 1 dice size / half dice sides AND half round-down +#}) - Passive: When the {Horde} has marked half or more of their HP, their standard attack deals {SAME AS PRIOR {...}} {physical/magic} damage instead.
+  ### - {for Solo} Relentless (2-4) - Passive: Can be spotlighted up to {two/three/four} times per GM turn. Spend Fear as usual to spotlight them.
 }

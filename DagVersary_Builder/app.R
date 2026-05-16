@@ -10,7 +10,6 @@
 library(shiny)
 library(dplyr)
 library(stringi)
-#library(tidyr)
 
 source("R/Supporting Functions and Code.R")
 
@@ -27,6 +26,16 @@ ui <- fluidPage(
       color: #eddb9d;
       padding-left: 10px;
       padding-bottom: 20px;
+    }
+    .adv-run {
+      display: flex;
+      border: 4px solid #320e45;
+      background: #d3bee8;
+      color: #320e45;
+      padding-left: 5px;
+      margin-left: 5px;
+      padding-right: 5px;
+      margin-right: 5px;
     }
     .form-control {
       background: #efefef
@@ -51,6 +60,13 @@ ui <- fluidPage(
     .bottom-aligned > div {
       flex-grow: 1;
     }
+    .inline label{ 
+      display: table-cell; 
+      text-align: center; 
+      vertical-align: middle;
+      padding-right: 15px;
+      }
+    .inline .form-group { display: table-row; }
     ")),
     htmlOutput("use_note"),
     tabsetPanel(
@@ -80,13 +96,16 @@ ui <- fluidPage(
                htmlOutput("dmg_note"),
                uiOutput("adv_spec")), 
       tabPanel("Run",
-               div(h4("Use this panel to run adversaries in-app")),
+               div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
                uiOutput("adv_run")), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       
       tabPanel("Obsidian",
-               div(h4("Copy from this tab to Obsidian if runing adversaries there"))), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+               div(h4("Copy from this tab to Obsidian if running adversaries there - details from the 'Customize' tab"))), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
       tabPanel("Credits",
-               htmlOutput("sources")) ### CREDIT DAGGERHEART SRD AND RIGHTKNIGHTTOFIGHT
+               htmlOutput("sources")), 
+      tabPanel("Feature Listing",
+               div(h4("Lookup table of features for adversaries")),
+               "WORK IN PROGRESS")
       )
 )
 
@@ -225,7 +244,9 @@ server <- function(input, output) {
           output[[i]] <- tagList()
           output[[i]][[j]] <- 
             div(class = "adv-run",
+                column(6,
                 build_adv_run_ui(input, names(active_adv_ct_vec())[i], j, input$tier) )
+            )
           output
         })
       })
@@ -236,9 +257,13 @@ server <- function(input, output) {
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
-    renderText({
-      div("<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>")
-      div("<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>")
+    renderUI({
+      HTML(
+        paste0(
+          "<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
+          "<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>"
+          )
+        )
     })
 }
 
