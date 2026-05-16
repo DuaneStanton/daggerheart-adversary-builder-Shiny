@@ -9,6 +9,7 @@
 
 library(shiny)
 library(dplyr)
+library(stringi)
 #library(tidyr)
 
 source("R/Supporting Functions and Code.R")
@@ -93,7 +94,7 @@ ui <- fluidPage(
 server <- function(input, output) {
 
   output$use_note <- renderText({
-    "<p>Custom adversary builder using RightKnighttoFight's Guide (see Credit tab)</p>"
+    "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credit</b> tab)</p>"
   })
   ###
   ### TODO
