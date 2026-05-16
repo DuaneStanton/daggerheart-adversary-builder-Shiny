@@ -1,4 +1,4 @@
-adv_type,tier,diff_rng,thresh_maj_rng,thresh_sev_rng,hp_rng,stress_rng,atk_rng,dmg_avg_rng,dice_pool_optns,minion_pasv
+adv_type,tier,diff_rng,thresh_maj_rng,thresh_sev_rng,hp_rng,stress_rng,atk_rng,dmg_avg_rng,dice_pool_optns,minion_pasv_rng
 Bruiser,1,12-14,7-9,13-15,5-7,3-4,0-2,8-11,"1d12+2,1d10+4,1d8+6",
 Bruiser,2,14-16,12-14,23-26,5-7,4-6,2-4,12-16,"2d12+3,2d10+2,2d8+6",
 Bruiser,3,16-18,19-22,35-40,6-8,4-6,3-5,18-22,"3d12+1,3d10+4,3d8+8",
