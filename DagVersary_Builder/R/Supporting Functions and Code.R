@@ -90,23 +90,37 @@ dmg_dice_pooler <- function(df_, tier, type, nbr, detail) {
                   choices = c(unlist(df__$dice_pool_lst), "Use Avg")))
 }
 
-featurize <- function(type, num, detail_nbr) {
+###
+### HERE OR IN app.R, NEED TO BUILD IN TO FEATURES FOR KEY TYPES:
+### - {for Minion} Minion ({minion pasv val here}) - Passive: The {Minion} is defeated when they take any damage. For every {minion pasv val here} damage a PC deals to the {Minion}, defeat an additional Minion within range the attack would succeed against.
+### - {for Minion} Group Attack - Action: Spend a Fear to choose a target and spotlight all {Minions} within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal {dmg} physical damage each. Combine this damage.
+### - {for Horde} Horde ({half dmg, OR lesser of down 1 dice size / half dice sides AND half round-down +#}) - Passive: When the {Horde} has marked half or more of their HP, their standard attack deals {SAME AS PRIOR {...}} {physical/magic} damage instead.
+### - {for Solo} Relentless (2-4) - Passive: Can be spotlighted up to {two/three/four} times per GM turn. Spend Fear as usual to spotlight them.
+
+feat_setup <- function(featname, featdtl = "", feattype, feattext) {
+  if (featdtl != ""){featname <- paste0(featname, "(", featdtl, ")")}
+  feattxt <- gsub("{featdtl}", featdtl, feattxt)
+  list("nm" = featname, "typ" = feattype, "txt" = feattext)
+}
+
+###
+### WORK IN PROGRESS: POPULATING featurize() WITH 1) REQUISITE and 2) RANDOMLY SELECTED TYPE-APPROPRIATE FEATURES
+###
+
+featurize <- function(type, num, detail_nbr, nm_val = "", ft_sel = NULL, dsc_val = "") {
   dtl_ftnm <- paste0("featname_", detail_nbr)
   dtl_fttyp <- paste0("feattype_", detail_nbr)
   dtl_ftdsc <- paste0("feattext_", detail_nbr)
   fluidRow(
     column(width = 12,
            div(class = "bottom-aligned",
-               div(textify(type, num, dtl_ftnm, "Feature name", "180px")),
-               div(selectInput(namify(type, num, dtl_fttyp), label = "Feature type", choices = c("Passive", "Action", "Reaction"), width = "110px")),
-               div(textify(type, num, dtl_ftdsc, "Feature description", "420px")) ))
+               div(textify(type, num, dtl_ftnm, "Feature name", "180px", nm_val)),
+               div(selectInput(namify(type, num, dtl_fttyp), label = "Feature type", choices = c("Passive", "Action", "Reaction"), selected = ft_sel, width = "110px")),
+               div(textify(type, num, dtl_ftdsc, "Feature description", "420px", dsc_val)) ))
     )
 }
 
 # UI for Customize tab per adversary -------------------------------------------
-###
-### MORE HERE: NEED HIDDEN-UNLESS MINION MINION PASSIVE WITH TOOLTIP ()
-###
 build_adv_spec_ui <- function(typ, num, tr) {
    div(
      h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
@@ -121,6 +135,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
                   div(numerify(adv_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
                   div(numerify(adv_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
                   div(numerify(adv_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
+                  if (typ == "Horde"){div(title = "# creatures per HP for flavor", numericInput(namify(typ, num, "perhp"), label = "#/HP", value = 5, step = 1, width = "70px"))},
                   div(numerify(adv_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
                   div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")),
                   if (typ == "Minion"){div(numerify(adv_ref_df, tr, typ, num, "minion_pasv", "Minion Passive", "minion_pasv_md", "120px", "120px"))})
@@ -149,7 +164,10 @@ build_adv_spec_ui <- function(typ, num, tr) {
 # UI for Run tab per adversary -------------------------------------------------
 list_adv_name <- function(inpt, typ, num, tr) {
   nm <- reactive({inpt[[namify(typ, num, "name")]]})
-  paste0("<b><span style=font-size: 2em;>", ifelse(nm() == "", "Adversary", nm()), "</spanp></b><span> (T", tr, " ", typ, " \u0023", num, ")</span>")
+  paste0("<b><span style=font-size: 2em;>", 
+         ifelse(nm() == "", "Adversary", nm()), 
+         "</spanp></b><span> (T", tr, " ", typ, " \u0023", num, ")</span>",
+         if (typ == "Horde"){paste0(" <span>(", inpt[[namify(typ, num, "perhp")]], "/HP)</span>")})
 }
 
 list_adv_desc <- function(inpt, typ, num) {
@@ -230,21 +248,30 @@ msg_hp_stress <- function(inpt, typ, num) {
 
 process_feat_txt <- function(txt) {
   txt_ <- txt
+  
   find_bolders <- stri_locate_all(str = txt, regex = ".ark a .tress|[0-9]+d[0-9]+|.pend a .ear|.pend [0-9]+ .ear")[[1]]
-
-  if (!all(is.na(find_bolders))) {
-    # account for adding '<b>' and '</b>' to the string as needed
-    for (i in 1:nrow(find_bolders)) {
-      find_bolders[i, "start"] <-  find_bolders[i, "start"] + 7 * (i - 1)
-      find_bolders[i, "end"] <-  find_bolders[i, "end"] + 7 * (i - 1)
+  find_bolders <- cbind(find_bolders, 0) # creates 3 column with '0'
+  find_italics <- stri_locate_all(str = txt, regex = "Hidden|hidden|Restrained|restrained|Vulnerable|vulnerable")[[1]]
+  find_italics <- cbind(find_italics, 1)
+  
+  process_mat <- rbind(find_bolders, find_italics)
+  process_mat <- process_mat[order(process_mat[, "start"]),]
+  
+  if (!all(is.na(process_mat[, "start"]))) {
+    # account for adding '<b>' and '</b>' OR '<i>' and '</i>' to the string as needed
+    for (i in 1:nrow(process_mat)) {
+      process_mat[i, "start"] <-  process_mat[i, "start"] + 7 * (i - 1)
+      process_mat[i, "end"] <-  process_mat[i, "end"] + 7 * (i - 1)
     }
     
-    for (z in 1:nrow(find_bolders)) {
+    for (z in 1:nrow(process_mat)) {
       txt_ <- 
         paste0(
-          substr(txt_, start = 1, stop = find_bolders[z, "start"] - 1),
-          "<b>", substr(txt_, start = find_bolders[z, "start"], stop = find_bolders[z, "end"]), "</b>",
-          substr(txt_, start = find_bolders[z, "end"] + 1, stop = nchar(txt_))
+          substr(txt_, start = 1, stop = process_mat[z, "start"] - 1),
+          ifelse(process_mat[z, 3] == 0, "<b>", "<i>"),
+          substr(txt_, start = process_mat[z, "start"], stop = process_mat[z, "end"]), 
+          ifelse(process_mat[z, 3] == 0, "</b>", "</i>"),
+          substr(txt_, start = process_mat[z, "end"] + 1, stop = nchar(txt_))
           )
     }
     txt_
@@ -333,11 +360,4 @@ build_adv_run_ui <- function(inpt, typ, num, tr, dmg_add) {
                  checkboxGroupInput(namify(typ, num, "conds"), label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable"), inline = TRUE))),
     fluidRow(textify(typ, num, "custom_cond", placehold = "Type custom conditions here", ))
     )
-  
-  ###
-  ### HERE OR IN app.R, NEED TO BUILD IN TO FEATURES FOR KEY TYPES:
-  ### - {for Minion} Minion ({minion pasv val here}) - Passive: The {Minion} is defeated when they take any damage. For every {minion pasv val here} damage a PC deals to the {Minion}, defeat an additional Minion within range the attack would succeed against.
-  ### - {for Minion} Group Attack - Action: Spend a Fear to choose a target and spotlight all {Minions} within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal {dmg} physical damage each. Combine this damage.
-  ### - {for Horde} Horde ({half dmg, OR lesser of down 1 dice size / half dice sides AND half round-down +#}) - Passive: When the {Horde} has marked half or more of their HP, their standard attack deals {SAME AS PRIOR {...}} {physical/magic} damage instead.
-  ### - {for Solo} Relentless (2-4) - Passive: Can be spotlighted up to {two/three/four} times per GM turn. Spend Fear as usual to spotlight them.
 }
