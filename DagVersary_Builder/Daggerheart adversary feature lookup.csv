@@ -1,0 +1,78 @@
+adv_type,adv_tiers,feat_type,feat_name,feat_text,feat_detail_note
+Bruiser,"1,2,3,4",Passive,Slow,"When you spotlight the {adversary} and they don’t have a token on their stat block, they can’t act yet. Place a token on their stat block and describe what they’re preparing to do. When you spotlight the {adversary} and they have a token on their stat block, clear the token and they can act.",
+Bruiser,"2,3,4",Passive,Ramp Up,"You must spend a Fear to spotlight the {adversary}. While spotlighted, they can make their standard attack against all targets within range.",
+Bruiser,"3,4",Passive,Direct Blow,The {adversary}’s attacks deal direct damage.,
+Bruiser,"2,3,4",Passive,Battering Blow,Targets who take damage from the {adversary}’s standard attack are knocked back to Very Close range.,
+Bruiser,"1,2,3,4",Action,Pin ‘em Down,"On a successful standard attack, mark a Stress to give the target the Restrained condition until they break free with a successful Action Roll or other appropriate action.",
+Bruiser,"2,3,4",Action,Frenzied Rage,"Spend a Fear to send the {adversary} into a blind rage; they can make {feat_det:tier} attacks against targets within Close range and deal {feat_det:exp_dmg*2} physical damage on a successful attack. After the rage, the {adversary} is temporarily Vulnerable.","insert tier for spot 1, insert standard damage for spot 2"
+Bruiser,"1,2,3,4",Action,Crushing Blow,"Mark a Stress to have the {adversary} make a standard attack. On a success, the attack’s force renders the target Vulnerable until they mark a Stress or gain a Hope.",
+Bruiser,"2,3,4",Action,Bullrush,Mark a Stress to have the {adversary} charge in a line within Close range and swing wildly at all targets in their path. Any targets within Melee range of the path must succeed on an Agility or Strength Reaction Roll or take {feat_det:dmg} physical damage and be knocked back to Very Close range.,insert standard damage (dice OR average)
+Bruiser,"3,4",Action,Hurl,Mark a Stress to have the {adversary} pick up and throw a huge object at a point or target within Close range. Anyone within Melee range of the point/target must succeed on an Agility Reaction Roll or take {feat_det:1.5_dmg} physical damage and be knocked back to Very Close range.,move up to next dice side and approx 0.3*tier*mod OR multiply average damage by 1.5
+Bruiser,"1,2,3,4",Action,Grapple,"Make an attack against a target within Melee range; instead of dealing damage, the target is Restrained and Vulnerable until the {adversary} marks 2 or more HP or the target succeeds on a Strength Action Roll.",
+Bruiser,"1,2,3,4",Reaction,Momentum,"When the {adversary} makes a successful attack against a PC, you gain a Fear.",
+Bruiser,"2,3,4",Reaction,Berserk,"When the {adversary} marks 2 or more HP, you can mark a Stress to immediately activate Frenzied Rage.",
+Bruiser,"1,2,3,4",Reaction,"Quick to Act, Slow to Think","When another adversary Restrains a target within Close range of the {adversary}, you can mark a Stress to have the {adversary} make a standard attack with advantage that targets both the target and the restraining adversary.",
+Horde,"1,2,3,4",Passive,Horde (feat_det:0.5_dmg),"When the {adversaries} have marked half or more of their HP, their standard attack deals {feat_det:half_dmg} physical damage instead.",ensure half is halving the dice-side AND the mod OR halving the dmg #
+Horde,4,Passive,Relentless (2),The {adversary} can be spotlighted up to two times per GM turn. Spend Fear as usual to spotlight them.,
+Horde,"2,3,4",Action,Swarm,"Spend a Fear to make 2 standard attacks on a single target in Close range, or 1 standard attack on each of two targets in Close range.",
+Horde,"3,4",Action,We Are Legion,Spend a Fear to make 1d4+1 standard attacks against targets in Close range.,
+Leader,3,Passive,Relentless (2),The {adversary} can be spotlighted up to two times per GM turn. Spend Fear as usual to spotlight them.,
+Leader,4,Passive,Relentless (3),The {adversary} can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.,
+Leader,"2,3,4",Passive,Your Strength Gives Me Strength,Adversaries within Very Close range of the {adversary} can add {feat_det:tier - 1}d4 to their damage rolls.,insert tier minus 1
+Leader,"1,2,3,4",Action,Call in Reinforcements,Summon as many Minions as there are party members; the Minions appear at Far range.,
+Leader,"1,2,3,4",Action,You May Fire When Ready,Spend a Fear to spotlight up to three {adversaries} within Far range of the {adversary}.,
+Leader,"1,2,3,4",Action,On My Command…,The {adversary} can make a standard attack and spotlight up to 1d4 + {feat_det:tier} {adversaries} within Far range if they have used a previous action to ready this spotlight. ,insert tier
+Leader,"2,3,4",Action,Pull Yourselves Together!,Mark 2 Stress to have the {adversary} inspire all adversaries within Close range; all adversaries within Far range can clear 1 Stress. You can spend a Fear to also have each adversary clear 1 HP.,
+Leader,"1,2,3,4",Action,Charge!,"Mark a Stress to spotlight up to 1d4 adversaries within Far range, who all make a standard attack. Successful attacks deal half damage.",
+Leader,"2,3,4",Action,Bring Them Down!,Spend a Fear to have the {adversary} indicate a target within Far range to their allies; the target is Vulnerable for the next adversary attack.,
+Leader,"2,3,4",Reaction,"To Me, To Me!","When the {adversary} marks 2 or more HP, you can immediately spotlight them to direct all adversaries within Close range to their location, standing between the {adversary} and any opponents. Attacks against the {adversary} have disadvantage until at least one adversary is defeated or moved beyond Melee range from the {adversary}.",
+Leader,"1,2,3,4",Reaction,Momentum,"When the {adversary} makes a successful attack against a PC, you gain a Fear.",
+Leader,"2,3,4",Reaction,Browbeat,"When an adversary within sight of the {adversary} misses on an attack, you can spend a Fear to have the {adversary} berate their underlings. The next 1d4 {adversaries} who make an attack do so with advantage.",
+Minion,"1,2,3,4",Passive,Minion ({feat_det:minion_pasv}),"The {adversary} is defeated when they take any damage. For every {feat_det:minion_pasv} damage a PC deals to the {adversary}, defeat an additional Minion within range the attack would succeed against.",insert the minion_pasv value
+Minion,"1,2,3,4",Action,Group Attack,"Spend a Fear to choose a target and spotlight all {Minions} within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal {feat_det:dmg_avg} physical damage each. Combine this damage.",insert dmg_avg
+Ranged,"2,3,4",Action,Ready...Aim…,"Spend a Fear to have all {Ranged} prepare a ranged attack; when you spotlight the {Ranged} immediately after spending Fear, describe how they are readying an attack and end their spotlight. The next time you spotlight the {Ranged}, have each {Ranged} make a standard attack against a target within range.",
+Ranged,"2,3,4",Action,Harrying Barrage,Mark a Stress to have the {adversary} direct a continuous volley covering the Close range extending outward from a target  any PC within or crossing through the affected area must succeed on an Agility Roll ({feat_det:tier*4}) or take {feat_det:exp_dmg*0.5}) physical damage.,"insert 4*tier first, insert half damage second"
+Ranged,"2,3,4",Action,Sniper’s Prowess,Spend a Fear to make an attack with advantage.,
+Ranged,"1,2,3,4",Action,Rapid Fire,Mark a Stress to make make an additional standard attack.,
+Ranged,"1,2,3,4",Action,Maximum Draw,"Mark a Stress and make a standard attack; on a success, add an additional die to the damage roll, or 3*tier if using average damage.",
+Ranged,"2,3,4",Reaction,Tit for Tat,"If the {adversary} marks 1 or more HP from an attack made from Close range or farther, you can mark a Stress to have them immediately make a standard attack with disadvantage against their attacker or another PC within Very Close range of their attacker.",
+Skulk,"2,3,4",Passive,Camouflaged,The {adversary} is Hidden if they are further than Very Close range of a PC.,
+Skulk,"2,3,4",Passive,Creeping Menace,"If the {adversary} moves within Very Close range of a PC, the PC must succeed on an Instinct Roll ({feat_det:tier*5}) or else mark a Stress.",insert tier*5
+Skulk,"2,3,4",Action,Cloaked,Become Hidden until after the {adversary}’s next attack. Attacks made while Hidden from this feature have advantage.,
+Skulk,"2,3,4",Action,Hobble,Make a standard attack on a success the target is Vulnerable until they clear at least 1 HP.,
+Skulk,"2,3,4",Action,Vicious Cowardice,Spend a Fear to make a standard attack and have the {adversary} immediately move up to Close range and become Hidden.,
+Skulk,"2,3,4",Reaction,There’s More of Them,"When the {adversary} marks 2 or more HP, you can mark a stress to have them signal to other {adversary}s in the scene; describe the haunting sounds that answer back and have all PCs within Close range of the attacked {adversary} mark a Stress.",
+Skulk,"1,2,3,4",Reaction,Pack Hunter,"If the {adversary} makes a successful standard attack and there is another {adversary} within Melee range of the target, the other {adversary} may immediately make a standard attack for half damage and you gain a Fear.",
+Social,"1,2,3,4",Passive,Smooth Operator,The {adversary}’s difficulty increases by {feat_def:tier} for rolls against them using Presence.,insert tier
+Social,"2,3,4",Action,Silver-tongued Devil,Spend a Fear to antagonize a PC; the PC must succeed on a Presence Roll ({feat_det:8+tier*3}) or else mark 2 Stress.,Insert 8 + tier*3
+Social,"2,3,4",Reaction,Don’t You Know Who I AM?!,"When a PC succeeds on an attack against the {adversary}, you can mark a Stress to have the {adversary} summon 1d4+1 henchmen, who appear at Far range.",
+Social,"2,3,4",Reaction,Heckle,You can heckle a PC who has recently made a roll with Hope; they must succeed on an Instinct Roll ({feat_det:8+3*tier}) or had disadvantage on their next Action Roll.,Insert 8 + tier*3
+Solo,"1,2,3,4",Passive,Slow,"When you spotlight the {adversary} and they don’t have a token on their stat block, they can’t act yet. Place a token on their stat block and describe what they’re preparing to do. When you spotlight the {adversary} and they have a token on their stat block, clear the token and they can act.",
+Solo,"2,3",Passive,Relentless (3),The {adversary} can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.,
+Solo,4,Passive,Relentless (4),The {adversary} can be spotlighted up to four times per GM turn. Spend Fear as usual to spotlight them.,
+Solo,"2,3,4",Passive,Focused,The {adversary} has advantage on attacks against a target with no allies in Melee or Very Close range.,
+Solo,"1,2,3,4",Action,Pin ‘em Down,"On a successful standard attack, mark a Stress to give the target the Restrained condition until they break free with a successful action roll.",
+Solo,"2,3,4",Action,Whirl of Blades,Spend a Fear to make a standard attack against up to 1d4 targets within Very Close range.,
+Solo,"3,4",Action,Get Over Here!,"Spend a Fear to introduce a force that pulls 1d4 targets within Close range into Melee range of the {adversary}; the force can be magical or physical (e.g. a magical construct or a grappling weapon). If a target is hiding behind an object that could reasonably be damaged, the object is destroyed.",
+Solo,"3,4",Action,A Foe Beyond Any of You,"Spend a Fear to make an attack against all PCs within Close range; on a successful attack, the target must mark 2 Stress or lose a Hope.",
+Solo,"2,3,4",Action,Shattering Blow,"Mark a Stress to make an attack; on a success, the target must mark two Armor Slots to reduce marked HP by 1.",
+Solo,"2,3,4",Action,Fueled by Rage,"Spend a Fear to clear all Stress; until the {adversary} marks at least one Stress, they reduce all incoming damage by {feat_det:tier}d4.",insert tier
+Solo,"3,4",Reaction,Coming Storm,"Countdown (Loop 1d4). The {adversary} evaluates their opponents carefully; when the countdown is at 1, the next time a PC makes a roll with Fear you can immediately spotlight the {adversary} and make two standard attacks against targets within range.",
+Solo,"2,3,4",Reaction,Cold Blooded,"When the {adversary} is caused to mark at least one Stress, roll a d6; on a 5 or 6, they mark no Stress. ",
+Solo,"2,3,4",Reaction,Blood for Blood,"When the {adversary} marks 2 or more HP, you can mark a Stress to have them immediately make an attack at disadvantage.",
+Solo,"1,2,3,4",Reaction,Momentum,"When the {adversary} makes a successful attack against a PC, you gain a Fear.",
+Solo,"1,2,3,4",Reaction,Last Stand,"When the {adversary} has 1 HP remaining, they make all attacks with advantage.",
+Standard,"1,2,3,4",Passive,Too Many to Handle,"When the {adversary} is within Melee range of a creature and at least one other {adversary} is within Close range, all attacks against that creature have advantage.",
+Standard,"1,2,3,4",Passive,Pack Tactics,"If the {adversary} makes a successful standard attack and another {adversary} is within Melee range of the target, deal {feat_det:dmg+5*tier} physical damage instead of their standard damage and you gain a Fear.","add 5*tier to damage, whether dice or average"
+Standard,"1,2,3,4",Passive,Closed Ranks,A creature who tries to move within Very Close range of the {adversary} must succeed on an Agility Roll. The Difficulty increases by the number of {same-type adversaries} within Melee range of the {adversary}.,
+Standard,"1,2,3,4",Action,Maximum Effort,Mark a Stress to make a standard attack and add {feat_det:tier}d4 to the damage.,insert tier
+Standard,"1,2,3,4",Reaction,Next One Up,"When the {adversary} is defeated, any one adversary of the same type within Close range of the defeated {adversary} and not in Melee range of a PC can immediately move to the defeated {adversary}.",
+Support,"1,2,3,4",Action,Harass,"Mark a Stress to make an attack projecting a harmful aura (magic) or noxious substance (physical) at a target within Close range; on a success, the target is Vulnerable until they mark a Stress or gain a Hope.",
+Support,"1,2,3,4",Action,Suppress,"Spend a Fear to make a standard attack; on a success, the target is Restrained and Vulnerable until they make a successful Trait Roll.",
+Support,"2,3,4",Action,Sinister Slather,"Spend a Fear to have the {adversary} coat a creature’s weapon with a smoky, smoldering coating; attacks made with the weapon apply direct damage.",
+Support,"2,3,4",Action,Ties That Bind,"Spend a Fear to make an attack against all targets within Very Close range. Targets the {adversary} succeeds against become Restrained and Vulnerable {for a fiction-following reason}. A target can break free, ending both conditions, with a successful Trait Roll.",
+Support,"1,2,3,4",Action,Embolden,Mark a Stress to Embolden another creature; its next attack is made with advantage.,
+Support,"1,2,3,4",Action,Invigorate,Spend a Fear to clear 1HP from another creature.,
+Support,"1,2,3,4",Action,Soothe,Mark a Stress to clear 2 Stress from another creature.,
+Support,"1,2,3,4",Action,Galvanize,Spend a Fear to clear 2 Stress from all targets within Close range.,
+Support,"2,3,4",Reaction,Fed by Fear,"When a PC fails with Fear on an action roll, clear 1HP.",
