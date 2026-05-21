@@ -47,17 +47,50 @@ calc_midpt <- function(x){
 
 # note: when working interactively in this R script, use
 #       "DagVersary_Builder/dagversary_stats_reference.csv" instead
-adv_ref_df <- 
+stat_ref_df <- 
   read.csv("dagversary_stats_reference.csv") |> 
   mutate(
     across(.cols = ends_with("_rng"), .fns = calc_midpt, .names = "{.col}_md"),
   )
-md_cols_idx <- grep("_rng_md", colnames(adv_ref_df))
-colnames(adv_ref_df)[md_cols_idx] <- sub("_rng", "", colnames(adv_ref_df)[md_cols_idx])
+md_cols_idx <- grep("_rng_md", colnames(stat_ref_df))
+colnames(stat_ref_df)[md_cols_idx] <- sub("_rng", "", colnames(stat_ref_df)[md_cols_idx])
 
-adv_ref_df$dice_pool_lst <- 
-  lapply(1:nrow(adv_ref_df), \(i) {if (!is.na(adv_ref_df$dice_pool_optns[i])){
-    strsplit(adv_ref_df$dice_pool_optns[i], split = ",")[[1]] }})
+stat_ref_df$dice_pool_lst <- 
+  lapply(1:nrow(stat_ref_df), \(i) {if (!is.na(stat_ref_df$dice_pool_optns[i])){
+    strsplit(stat_ref_df$dice_pool_optns[i], split = ",")[[1]] }})
+
+# load adversary feature reference ---------------------------------------------
+feat_ref_df <- 
+  read.csv("Daggerheart adversary feature lookup.csv") |> 
+  # expand so 1 row per type/tier/feat
+  mutate(incl_t1 = grepl("1", adv_tiers),
+         incl_t2 = grepl("2", adv_tiers),
+         incl_t3 = grepl("3", adv_tiers),
+         incl_t4 = grepl("4", adv_tiers),
+         tier_ct = incl_t1 + incl_t2 + incl_t3 + incl_t4)
+
+### TODO
+### ABOVE:
+### 1) count # times 'feat_det' appears
+### 2) replace the '{feat_det:}' text with necessary code for ability to evaluate the contents
+###    (e.g. 'nm' of needed input[[namify(...)]] eval, PLUS any related operations e.g. half-damage)
+###
+
+feat_ref_df <- 
+  lapply(1:nrow(feat_ref_df), \(i) {
+    lapply(1:(feat_ref_df$tier_ct[i]), \(j) {
+      unique_tier <- 
+        strsplit(feat_ref_df$adv_tiers[i], split = ",")[[1]] |> 
+        gsub(pattern = " ", replacement = "") |> 
+        as.numeric()
+    
+      feat_ref_df[i,] |> 
+        select(-c(starts_with("incl_"), contains("tier"))) |> 
+        mutate(tier = unique_tier[j])
+  }) |> 
+    do.call(what = rbind)
+}) |> 
+  do.call(what = rbind)
 
 # customize tooltip for recommended difficulty range ---------------------------
 recommend_range <- function(x, tier, typ, colnm) {
@@ -132,22 +165,22 @@ build_adv_spec_ui <- function(typ, num, tr) {
      fluidRow(
        column(width = 12, offset = 0,
               div(class = "bottom-aligned",
-                  div(numerify(adv_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
-                  div(numerify(adv_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
-                  div(numerify(adv_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
+                  div(numerify(stat_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
+                  div(numerify(stat_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
+                  div(numerify(stat_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
                   if (typ == "Horde"){div(title = "# creatures per HP for flavor", numericInput(namify(typ, num, "perhp"), label = "#/HP", value = 5, step = 1, width = "70px"))},
-                  div(numerify(adv_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
-                  div(numerify(adv_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")),
-                  if (typ == "Minion"){div(numerify(adv_ref_df, tr, typ, num, "minion_pasv", "Minion Passive", "minion_pasv_md", "120px", "120px"))})
+                  div(numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
+                  div(numerify(stat_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")),
+                  if (typ == "Minion"){div(numerify(stat_ref_df, tr, typ, num, "minion_pasv", "Minion Passive", "minion_pasv_md", "120px", "120px"))})
        )),
      fluidRow(
        column(width = 12, offset = 0,
               div(class = "bottom-aligned",
-                  div(numerify(adv_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
+                  div(numerify(stat_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
                   div(textify(typ, num, "wpn", "Weapon", "140px")),
                   div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
-                  dmg_dice_pooler(adv_ref_df, tr, typ, num, "dmg_dice"),
-                  numerify(adv_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
+                  dmg_dice_pooler(stat_ref_df, tr, typ, num, "dmg_dice"),
+                  numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                   div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
        )),
      textify(typ, num, "exp", "Experience(s)", "350px"),
@@ -249,7 +282,7 @@ msg_hp_stress <- function(inpt, typ, num) {
 process_feat_txt <- function(txt) {
   txt_ <- txt
   
-  find_bolders <- stri_locate_all(str = txt, regex = ".ark a .tress|[0-9]+d[0-9]+|.pend a .ear|.pend [0-9]+ .ear")[[1]]
+  find_bolders <- stri_locate_all(str = txt, regex = ".ark a .tress|.ark [0-9]+ .tress|.ark .tress|[0-9]+d[0-9]+|.pend a .ear|.pend [0-9]+ .ear|.pend .ear")[[1]]
   find_bolders <- cbind(find_bolders, 0) # creates 3 column with '0'
   find_italics <- stri_locate_all(str = txt, regex = "Hidden|hidden|Restrained|restrained|Vulnerable|vulnerable")[[1]]
   find_italics <- cbind(find_italics, 1)

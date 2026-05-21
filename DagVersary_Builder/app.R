@@ -94,6 +94,7 @@ ui <- fluidPage(
       tabPanel("Customize",
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
                htmlOutput("dmg_note"),
+               div(class="inline", checkboxInput("fill_features", "Provide adversary features")),
                uiOutput("adv_spec")), 
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
@@ -232,6 +233,63 @@ server <- function(input, output) {
   ### NEED TO CREATE TEMPLATE FOR TYPE-APPROPRIATE MOTIVE/TACTIC DEFAULTS
   ### CREATE MULTIPLE SETS TO APPLY FOR EACH TYPE AND ALLOW USER TO CHECK BOX FOR RANDOMIZED
     })
+  
+  #### WORK IN PROGRESS
+  feat_df <- reactive({
+    req(active_adv_ct_vec())
+    filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
+  })
+  
+  obsvr <- reactive({list(active_adv_ct_vec(), input$fill_features)})
+  
+  observeEvent(obsvr(), {
+    if (input$fill_features) {
+      for (i in 1:sum(active_adv_ct_vec())) {
+        for (j in 1:(active_adv_ct_vec()[i])) {
+          ### POSSIBLY ANOTHER FOR LOOP FOR FEATURES 1:n...
+          ### BUT SHOULD CAP FEATURES TO LESS FOR TIERS 1/2...MAYBE JUST TIE TO TIER...
+          ### MAY ALSO NEED SPECIAL LOGIC FOR MINIONS
+          ### AND ALSO DON'T WANT REPEATS
+          
+          # SHORTEN IDX AS NEEDED
+          feat_idx <- sample(1:sum(feat_df()$adv_type == names(active_adv_ct_vec())[i]), size = 1)
+          
+          updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("featname_", 1)),
+                          # REDO THIS TO RANDOM SAMPLE
+                          value = 
+                            feat_df()$feat_name[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
+          
+          updateSelectInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("feattype_", 1)),
+                          # REDO THIS TO RANDOM SAMPLE
+                          selected = 
+                            feat_df()$feat_type[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
+          
+          updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("feattext_", 1)),
+                          # REDO THIS TO RANDOM SAMPLE
+                          value = 
+                            feat_df()$feat_text[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
+                            
+        }
+      }
+    } else if (!input$fill_features) {
+      ### REPEAT ABOVE, BUT SET NAME/DETAIL TO "" AND TYPE TO 'Passive'
+      #...currently doesn't work, so just commenting out for now...
+      # for (i in 1:sum(active_adv_ct_vec())) {
+      #   for (j in 1:(active_adv_ct_vec()[i])) {
+      #     ### POSSIBLY ANOTHER FOR LOOP FOR FEATURES 1:n...
+      #     ### BUT SHOULD CAP FEATURES TO LESS FOR TIERS 1/2...
+      #     updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("featname_", 1)),
+      #                     # REDO THIS TO RANDOM SAMPLE
+      #                     value = "")
+      #     
+      #   }
+      # }
+    }
+  })
+  
+  
+  ####
+  
   
   # server Run panel -----------------------------------------------------------
   output$adv_run <- 
