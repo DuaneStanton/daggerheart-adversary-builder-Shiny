@@ -77,9 +77,30 @@ list_stats_1 <- function(inpt, typ, num) {
 msg_hp_stress <- function(inpt, typ, num) {
   msg <- reactive({
     if (inpt[[namify(typ, num, "stress_run")]] == 0 & inpt[[namify(typ, num, "hp_run")]] > 0) {
-      "<p style ='color: green; text-align: center'><b>Fully stressed! Now <i>vulnerable</i> and any incurred stress reduces HP by 1.</b></p>"
-    } else if (inpt[[namify(typ, num, "hp_run")]] == 0) {"<p style ='color: #ff175b; text-align: center'><BIG><b>DEFEATED!</b></BIG></p>"}
+      "<p style ='color: green; text-align: center'><b>Fully stressed! <i>Vulnerable</i> and any incurred stress reduces HP by 1.</b></p>"
+    } else if (inpt[[namify(typ, num, "hp_run")]] == 0) {"<p style ='color: #9300CF; font-size: 25px; text-align: center;'><b>DEFEATED!</b></p>"}
   })
+  
+  renderUI(HTML(msg()))
+}
+
+msg_status <- function(inpt, typ, num) {
+  msg_h <- reactive({
+    if ("Hidden" %in% inpt[[namify(typ, num, "conds")]]) {
+      "<p style = 'color: #544659; text-align: center; font-size: 18px;'><b><i>Hidden:</i></b> rolls against have disadvantage"
+    }
+  })
+  msg_r <- reactive({
+    if ("Restrained" %in% inpt[[namify(typ, num, "conds")]]) {
+      "<p style = 'color: black; text-align: center; font-size: 18px;'><b><i>Restrained:</i></b> cannot move, but can take actions"
+    }
+  })
+  msg_v <- reactive({
+    if ("Vulnerable" %in% inpt[[namify(typ, num, "conds")]]) {
+      "<p style = 'color: darkred; text-align: center; font-size: 18px;'><b><i>Vulnerable:</i></b> rolls against have advantage"
+    }
+  })
+  msg <- reactive({ paste(msg_h(), msg_r(), msg_v(), collapse = "<br>") })
   
   renderUI(HTML(msg()))
 }
@@ -182,22 +203,38 @@ list_features <- function(inpt, typ, num) {
   }
 }
 
+
 build_adv_run_ui <- function(inpt, typ, num, tr, dmg_add) {
   div(
-    fluidRow(renderUI({HTML(list_adv_name(inpt, typ, num, tr))})),
-    fluidRow(list_adv_desc(inpt, typ, num)),
-    list_motives_tactics(inpt, typ, num),
-    fluidRow(list_stats_1(inpt, typ, num)),
-    fluidRow(msg_hp_stress(inpt, typ, num)),
+    fluidRow(column(width = 12,
+          fluidRow(renderUI({HTML(list_adv_name(inpt, typ, num, tr))})),
+          fluidRow(list_adv_desc(inpt, typ, num)),
+          list_motives_tactics(inpt, typ, num),
+          fluidRow(list_stats_1(inpt, typ, num))
+          )),
+    fluidRow(column(width = 12, msg_hp_stress(inpt, typ, num))),
     fluidRow(
-      column(width = 6,
-             div(selectInput(namify(typ, num, "hp_run"), label = "HP", choices = c(0:inpt[[namify(typ, num, "hp")]]), selected = inpt[[namify(typ, num, "hp")]], width = "70px"))),
-      column(width = 6,
-             div(selectInput(namify(typ, num, "stress_run"), label = "Stress", choices = c(0:inpt[[namify(typ, num, "stress")]]), selected = inpt[[namify(typ, num, "stress")]], width = "70px"))),
-    ),
-    fluidRow(list_features(inpt, typ, num)),
-    fluidRow(div(class="inline", title = "Hidden: rolls against have disadvantage; Restrained: can't move, can take actions; Vulnerable: all rolls against have advantage", 
+      column(width = 3, 
+             div(class = "inline",
+                 selectInput(namify(typ, num, "hp_run"), 
+                             label = "HP", 
+                             choices = c(0:inpt[[namify(typ, num, "hp")]]), 
+                             selected = inpt[[namify(typ, num, "hp")]], 
+                             width = "70px"))
+             ),
+      ### TODO: AUTO-CHECK VULNERABLE BOX WHEN STRESS  = 0 ; MODIFY STRESSED MESSAGE TO REMOVE VULNERABLE TEXT
+      column(width = 3,
+             div(class = "inline",
+                 selectInput(namify(typ, num, "stress_run"), 
+                             label = "Stress", 
+                             choices = c(0:inpt[[namify(typ, num, "stress")]]), 
+                             selected = inpt[[namify(typ, num, "stress")]], 
+                             width = "70px"))
+      ) ),
+    fluidRow(column(width = 12, list_features(inpt, typ, num))),
+    fluidRow(column(width = 12, msg_status(inpt, typ, num))),
+    fluidRow(div(class="inline",
                  checkboxGroupInput(namify(typ, num, "conds"), label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable"), inline = TRUE))),
-    fluidRow(textify(typ, num, "custom_cond", placehold = "Type custom conditions here", ))
+    fluidRow(textify(typ, num, "custom_cond", placehold = "Type custom conditions here"))
   )
 }
