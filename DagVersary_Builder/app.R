@@ -10,6 +10,7 @@
 library(shiny)
 library(dplyr)
 library(stringi)
+library(DT)
 
 source("R/Supporting Functions and Code.R")
 source("R/Customize section code.R")
@@ -37,6 +38,10 @@ ui <- fluidPage(
       padding-left: 5px;
       margin-left: 5px;
       padding-right: 5px;
+      margin-right: 5px;
+      width: 710px;
+    }
+    .shiny-html-output .shiny-bound-output {
       margin-right: 5px;
     }
     .form-control {
@@ -99,22 +104,26 @@ ui <- fluidPage(
       tabPanel("Customize",
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
                htmlOutput("dmg_note"),
-
-                 div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
+               div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
                    selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
-               uiOutput("adv_spec")), 
+               uiOutput("adv_spec")
+               ), 
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
-               uiOutput("adv_run")), ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
-      
+               div(uiOutput("adv_run"))
+               ), 
+      ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian",
                div(h4("Copy from this tab to Obsidian if running adversaries there - details from the 'Customize' tab")),
-               "WORK IN PROGRESS"), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+               "WORK IN PROGRESS"
+               ), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
       tabPanel("Credits",
-               htmlOutput("sources")), 
+               htmlOutput("sources")
+               ), 
       tabPanel("Feature Listing",
                div(h4("Lookup table of features for adversaries")),
-               "WORK IN PROGRESS")
+               div(dataTableOutput("features_df"))
+               )
       )
 )
 
@@ -248,23 +257,29 @@ server <- function(input, output) {
     filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
   })
   
+  horde_df <- reactive({ # used for the -non- 'Horde (#)' features set
+    req(feat_df())
+    if ("Horde" %in% feat_df()$adv_type) {
+      filter(feat_df(), adv_type == "Horde" & !grepl("Horde \\(", feat_name))
+    }
+  })
+  
   obsvr <- reactive({list(active_adv_ct_vec(), input$feat_fill_ct)})
   
   ###
   # function to streamline the update...Input process
-  update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx) {
+  update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx = NULL) {
     updateTextInput(inputId = namify(adv_nm, adv_num, paste0("featname_", inpt_num)),
-                    value = adv_df$feat_name[val_idx])
+                    value = ifelse(is.null(val_idx), "", adv_df$feat_name[val_idx]))
     updateSelectInput(inputId = namify(adv_nm, adv_num, paste0("feattype_", inpt_num)),
-                      selected = adv_df$feat_type[val_idx])
+                      selected = if (is.null(val_idx)) {"Passive"} else {adv_df$feat_type[val_idx]})
     updateTextInput(inputId = namify(adv_nm, adv_num, paste0("feattext_", inpt_num)),
-                    value = adv_df$feat_text[val_idx])
+                    value = ifelse(is.null(val_idx), "", adv_df$feat_text[val_idx]))
   }
   
   # function to fill Minion features
   fill_minion_feat <- function(id_ct, feat_df) {
     df_ <- feat_df[feat_df$adv_type == "Minion",] # already sorted so Passive then Action 
-    
     update_inputs("Minion", id_ct, 1, df_, 1)
     update_inputs("Minion", id_ct, 2, df_, 2)
   }
@@ -275,104 +290,107 @@ server <- function(input, output) {
     update_inputs("Horde", id_ct, 1, df_, 1)
   }
   
-  smpl_1 <- function(x, p = NULL){sample(x, size = 1, replace = FALSE, prob = p)}
+  smpl_1 <- function(x){sample(x, size = 1, replace = FALSE, prob = NULL)}
   
-  # function to fill feature details per user specification
-  # note: standard inputs for Minions and Hordes; 'requiring' Solos to have at least one of Momentum and Relentless
-  # note: weighted preference toward features beyond that by # features:
-  # 1 : either Passive or Action
-  # 2 : one Passive or Action, then equal weight among Passive / Action / Reaction
-  # 3+ : one Passive, one Action, then equal weight among Passive / Action / Reaction
-  # inputs:
-  # - act_adv_ct_vec : used to pass-through the session's active_adv_ct_vec() object
-  # - num_feat : used to pass-through the session's input$feat_fill_ct
-  # - feat_df : used to pass-through the session's filtered adversary features data.frame
-  fill_features <- function(act_adv_ct_vec, num_feat, feat_df) {
-    if (num_feat > 0) {
-     for (i in 1:length(act_adv_ct_vec)) {
-       for (j in 1:(act_adv_ct_vec[i])) {
-         
-       }
-     } 
-    }
+  # generating a feature set per adversary, with no repeats of features per adversary
+  feat_sampler_idx <- function(n_sametyp_adv, feat_df, n_feat) {
+    feat_n <- min(nrow(feat_df), n_feat)
+    idx_psv <- which(feat_df$feat_type == "Passive")
+    idx_act <- which(feat_df$feat_type == "Action")
+    idx_rct <- which(feat_df$feat_type == "Reaction")
+    idx_set <- c(idx_psv, idx_act, idx_rct)
+    # first selection must be either passive or action
+    # ...ensure no repeats per adversary for feature set
+    feat_mat <- matrix(nrow = n_sametyp_adv, ncol = feat_n)
+    smpl_ <- sample(c(idx_psv, idx_act), size = n_sametyp_adv, replace = TRUE)
+    feat_mat[, 1] <- smpl_
+    
+    if (feat_n > 1) {
+      for (i in 1:n_sametyp_adv) {
+        for (j in 2:feat_n) {
+          if (length(setdiff(idx_set, feat_mat[i, 1:(j- 1)])) >= 1) {
+            feat_mat[i, j] <- smpl_1(setdiff(idx_set, feat_mat[i, 1:(j - 1)]))
+          }
+        }
+      }
+      feat_mat
+    } else {feat_mat}
+    
+    ### RESUME HERE? - ROWS ARE SAME-TYPE ADVERSARY, COLS ARE FEATURE DF INDICES
+    
   }
-  ###
   
-  # MAY NEED TO INCLUDE A PRELIMINARY 'IF' FOR THE GIVEN ADVERSARY TYPE HAVING A > 0 COUNT, ELSE IT MAY CRASH WHEN USER CHANGES THE COUNT...
-  # ALSO CRASHES WHEN >1 FOR GIVEN ADVERSARY TYPE
+  # 
+  ###
+  ### NEED TO RETHINK LOGIC - CURRENTLY POPULATES UP TO SET #, BUT WON'T CLEAR
+  ### 1) CHECK FEAT FILL COUNT (0 / >0 SPLIT)
+  ### 2) ADVERSARY TYPE SPLIT
+  ### 3a) 0 SPLIT: (RE)SET ALL TO DEFAULTS
+  ### 3b) >0 SPLIT: FILL UP TO COUNT -AND- (RE)SET ALL > COUNT TO DEFAULTS
+  ###
+  ### ...4) ONCE THE ABOVE IS WORKING, REFACTOR/MOVE CODE TO DEDICATED R SCRIPT OUTSIDE OF app.R???
+  ###
   observeEvent(obsvr(), {
-    req(sum(adv_ct_vec()) > 0)
+    req(active_adv_ct_vec(),#sum(adv_ct_vec()) > 0, ## JUST active_adv_ct_vec() AND NO '>'????
+        input$feat_fill_ct)
     if (input$feat_fill_ct > 0) {
       for (i in 1:length(active_adv_ct_vec())) { # per adversary type
-        for (j in 1:(active_adv_ct_vec()[i])) { # per count within type
-          adv_nm_ <- names(active_adv_ct_vec())[i]
-          
-          ###
-          ### MINIONS ALWAYS HAVE THE SAME 2 FEATURES
-          ### HORDES ALWAYS HAVE ENTRY 1 AS 'HORDE'
-          ###
-          
-          # if (names(active_adv_ct_vec())[i] == "Minion") { # always same input for Minions
-          #   
-          # } else { # non-Minions have {tier #} features generated 
-          #   
-          # }
-          
-          ### POSSIBLY ANOTHER FOR LOOP FOR FEATURES 1:n...
-          ### BUT SHOULD CAP FEATURES TO LESS FOR TIERS 1/2...MAYBE JUST TIE TO TIER...
-          ### MAY ALSO NEED SPECIAL LOGIC FOR MINIONS
-          ### AND ALSO DON'T WANT REPEATS
-          
-          if (adv_nm_ == "Minion") {###
-          fill_minion_feat(j, feat_df()) # always 'Minion' Passive and 'Group Attack' Action
+        adv_nm_ <- names(active_adv_ct_vec())[i]
+        adv_ct_ <- unname(active_adv_ct_vec())[i]
+        if (!(adv_nm_ %in% c("Minion", "Horde"))) {
+          feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
+            feat_sampler_idx(adv_ct_, filter(feat_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct))
+        }
+        
+        for (j in 1:adv_ct_) { # per count within type
+          if (adv_nm_ == "Minion") {
+          fill_minion_feat(j, feat_df()) 
           } else if (adv_nm_ == "Horde") {
-            fill_horde_feat(j, feat_df()[feat_df()$adv_type == adv_nm_,]) # first entry is always 'Horde (#)'
+            fill_horde_feat(j, feat_df()[feat_df()$adv_type == adv_nm_,]) 
+            ###
+            ### MAY NEED TROUBLESHOOT - SOMETIMES DUPLICATES ENTRIES ; MORE FEATURES AT LOWER LEVELS WOULD MINIMIZE RISK
+            ###
             if (input$feat_fill_ct > 1) { # populate as available
-              horde_df <- reactive({feat_df()[feat_df()$adv_type == adv_nm_ & !grepl("Horde \\(", feat_df()$feat_name),]})
-              if (nrow(horde_df() > input$feat_fill_ct)) {
-                for (k in 2:(input$feat_fill_ct)) {
-                  update_inputs(adv_nm_, j, k, horde_df(), smpl_1(1:nrow(horde_df())))
+              if (nrow(horde_df()) >= (as.numeric(input$feat_fill_ct) - 1)) {
+                
+                feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
+                  feat_sampler_idx(adv_ct_, filter(horde_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct) - 1)
+
+                for (k in 2:as.numeric(input$feat_fill_ct)) {
+                  update_inputs(adv_nm_, j, k, horde_df(), feat_idx_mat[j, k - 1])
                 }
               }
             }
+            ##
+            if (as.numeric(input$feat_fill_ct) < 5) {
+              for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
+                update_inputs(adv_nm_, j, k, data.frame(), NULL)
+              }
+            }
+            ##
+            
           } else {### non-Horde, non-Minion set
-          
-          # SHORTEN IDX AS NEEDED
-          feat_idx <- sample(1:sum(feat_df()$adv_type == names(active_adv_ct_vec())[i]), size = 1)
-          
-          updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("featname_", 1)),
-                          # REDO THIS TO RANDOM SAMPLE
-                          value = 
-                            feat_df()$feat_name[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
-          
-          updateSelectInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("feattype_", 1)),
-                          # REDO THIS TO RANDOM SAMPLE
-                          selected = 
-                            feat_df()$feat_type[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
-          
-          updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("feattext_", 1)),
-                          # REDO THIS TO RANDOM SAMPLE
-                          value = 
-                            feat_df()$feat_text[feat_df()$adv_type == names(active_adv_ct_vec())[i]][feat_idx])
-          
-          } ###
-          
-                            
+            for (k in 1:as.numeric(input$feat_fill_ct)) {
+              update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
+            }
+            if (as.numeric(input$feat_fill_ct) < 5) {
+              for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
+                update_inputs(adv_nm_, j, k, data.frame(), NULL)
+              }
+            }
+          }
         }
       }
-    } else if (input$feat_fill_ct == 0) {
-      ### REPEAT ABOVE, BUT SET NAME/DETAIL TO "" AND TYPE TO 'Passive'
-      #...currently doesn't work, so just commenting out for now...
-      # for (i in 1:sum(active_adv_ct_vec())) {
-      #   for (j in 1:(active_adv_ct_vec()[i])) {
-      #     ### POSSIBLY ANOTHER FOR LOOP FOR FEATURES 1:n...
-      #     ### BUT SHOULD CAP FEATURES TO LESS FOR TIERS 1/2...
-      #     updateTextInput(inputId = namify(names(active_adv_ct_vec())[i], j, paste0("featname_", 1)),
-      #                     # REDO THIS TO RANDOM SAMPLE
-      #                     value = "")
-      #     
-      #   }
-      # }
+    } else if (input$feat_fill_ct == 0) { # reset to defaults
+      for (i in 1:length(active_adv_ct_vec())) { # per adversary type
+        adv_nm_ <- names(active_adv_ct_vec())[i]
+        adv_ct_ <- unname(active_adv_ct_vec())[i]
+        for (j in 1:adv_ct_) {
+          for (k in 1:5) {
+            update_inputs(adv_nm_, j, k, data.frame(), NULL)
+          }
+        }
+      }
     }
   })
   
@@ -391,14 +409,13 @@ server <- function(input, output) {
           output[[i]] <- tagList()
           output[[i]][[j]] <- 
             div(class = "adv-run",
-                column(6,
+                column(12,
                 build_adv_run_ui(input, names(active_adv_ct_vec())[i], j, input$tier) )
             )
           output
         })
       })
     })
-  
   
   # server Obsidian panel ------------------------------------------------------
   
@@ -412,6 +429,14 @@ server <- function(input, output) {
           )
         )
     })
+  
+  # server Features panel ------------------------------------------------------
+  feat_tbl <- reactive({
+    tryCatch({select(feat_df(), -feat_detail_note)}, error = \(e) {data.frame()})
+    })
+  
+  output$features_df <- 
+    DT::renderDataTable(feat_tbl(), options = list(striped = TRUE, hover = TRUE))
 }
 
 # Run the application 
