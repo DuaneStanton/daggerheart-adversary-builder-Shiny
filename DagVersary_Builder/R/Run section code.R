@@ -105,6 +105,7 @@ msg_status <- function(inpt, typ, num) {
   renderUI(HTML(msg()))
 }
 
+# function bold /italicize key phrases in adversary featues --------------------
 process_feat_txt <- function(txt) {
   txt_ <- txt
   
@@ -149,13 +150,14 @@ process_feature <- function(inpt, typ, num, ftrnum) {
   featnm <- reactive({
     if (has_feattxt(inpt, typ, num, ftrnum)) {
       ifelse(inpt[[namify(typ, num, paste0("featname_", ftrnum))]] == "", 
-             "<b>{Feature}:", paste0("<b>", inpt[[namify(typ, num, paste0("featname_", ftrnum))]]))
+             "<b><i>{Feature}", 
+             paste0("<b><i>", inpt[[namify(typ, num, paste0("featname_", ftrnum))]]))
     }
   })
   
   feattyp <- reactive({
     if (has_feattxt(inpt, typ, num, ftrnum)) {
-      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ":</b> ")
+      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ": ")
     }
   })
   
@@ -165,7 +167,7 @@ process_feature <- function(inpt, typ, num, ftrnum) {
     }
   })
   
-  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), feattxt())} else {""}
+  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), "</i></b>", feattxt())} else {""}
 }
 
 classify_feattyp <- function(inpt, typ, num, ftrnum) {
@@ -174,6 +176,55 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
   } else if (inpt[[namify(typ, num, paste0("feattype_", ftrnum))]] == "Reaction"){3}
 }
 
+# function to input designated adversary-specific feature text details ---------
+# note: designated-input structure MUST be of the form '<<{DETAIL TEXT}>>'
+process_feat_txt_dtl <- function(inpt, typ, num, txt) {
+  txt_ <- txt
+  caret_strt_idx <- stri_locate_all(str = txt, regex = "<<")[[1]]#regex = "<<.+>>?")[[1]]
+  caret_end_idx <- stri_locate_all(str = txt, regex = ">>")[[1]]
+  
+  if (!all(is.na(caret_strt_idx))) {
+    caret_idx <- matrix(nrow = nrow(caret_strt_idx), ncol = 2, dimnames = list(NULL, c("start", "end")))
+    for (z in 1:nrow(caret_idx)) {
+      caret_idx[z,] <- c(caret_strt_idx[z, "start"], caret_end_idx[z, "end"])
+    }
+
+    ptrns <- vapply(1:nrow(caret_idx), \(z) {
+      substring(txt, first = caret_idx[z, "start"], last = caret_idx[z, "end"])
+    }, character(1L))
+    
+    
+    ###
+    ### RESUME HERE - NOT CURRENTLY WORKING
+    ###
+    ptrn_subs <- reactiveValues()
+    
+    for (z in 1:length(ptrns)) {
+      ptrn_subs[[z]] <- inpt[[namify(typ, num, gsub("<<|>>", "", ptrns[z]))]]
+    }
+    
+    ###
+    ### ISSUE AT THE 'REPLACEMENT' STEP - NEED TO WORK OUT HOW TO ACCESS THE input$... ELEMENT
+    ### https://stackoverflow.com/questions/36841477/shiny-modules-how-to-access-the-input-of-a-looped-shiny-module ???
+    
+    access_rv = function(rv,field){
+      isolate(purrr::pluck(rv, field))#!!!field))
+    }
+    
+    for (z in 1:length(ptrns)) {
+      txt_ <- 
+        sub(pattern = ptrns[z], 
+            replacement = access_rv(ptrn_subs, z), 
+            x = txt_)
+    }
+    
+    txt_
+  } else {
+    txt
+  }
+}
+
+# function to only list 'active' adversary features ----------------------------
 list_features <- function(inpt, typ, num) {
   # list Passives, then Actions, then Reactions...if feature text present
   feattypes_set <- reactive({
@@ -191,7 +242,8 @@ list_features <- function(inpt, typ, num) {
           what = rbind,
           args = lapply(1:length(feattypes_set()), \(z){
             data.frame(idx = z, typval = feattypes_set()[z],
-                       txt = process_feature(inpt, typ, num, z)) })
+                       txt = process_feature(inpt, typ, num, z)  |> ### NEEDS TEST #)}) #
+                             process_feat_txt_dtl(inpt = inpt, typ = typ, num = num)) })
         )
       x <- x[x$typval > 0,]
       x <- x[order(x$typval),]
@@ -203,7 +255,7 @@ list_features <- function(inpt, typ, num) {
   }
 }
 
-
+# function for final adversary 'Run' tab UI ------------------------------------
 build_adv_run_ui <- function(inpt, typ, num, tr, dmg_add) {
   div(
     fluidRow(column(width = 12,
