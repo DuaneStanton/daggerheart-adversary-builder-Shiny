@@ -178,6 +178,60 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
 
 # function to input designated adversary-specific feature text details ---------
 # note: designated-input structure MUST be of the form '<<{DETAIL TEXT}>>'
+
+###
+### scenarios to develope for:
+### '{#}x dmg -/+ {#}' (MOD DICE IF DICE != "Use Average", ELSE USE AVG DMG; MAY HAVE ONLY THE MULT OR THE SUB/ADD)
+###  - {integer}x : simply adjust dice
+###  - 0.5x : reduce dice side by 1 (e.g. 1d6 -> 1d4) IF POSSIBLE, ELSE APPLY TO EXPECTED DAMAGE
+###  - 1.5x : increase dice side by 1
+### '{#}x exp_dmg' (CALC EXP DMG IF DICE, ELSE USE AVG DMG)
+### '{#}x tier' (MAY NOT HAVE MULT)
+
+# first: useful helper functions for processing the details
+
+prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
+  # note: {DETAIL TEXT} involving multiplication / addition / subtraction -always- has the below form
+  # {#}x {#d#  for dice // # for average dmg // 'tier' for tier} -/+{#} ; may or may not have multiplier AND add/sub
+  mult <- grepl("x", feat_det_txt)
+  mult_ <- if (mult) {sub("^([0-9]+\\.{0,1}[0-9]*)x.*$", "\\1", feat_det_txt) |> as.numeric()}
+  pls <- grepl("\\+", feat_det_txt)
+  add_ <- if (pls) {sub("^.+\\+\\s*([0-9]+)$", "\\1", feat_det_txt) |> as.numeric()}
+  mns <- grepl("\\-", feat_det_txt)
+  sub_ <- if (mns) {sub("^.+\\-\\s*([0-9]+)$", "\\1", feat_det_txt) |> as.numeric()}
+  
+  main <- 
+    if (grepl("tier", feat_det_txt)) {"tier"
+    } else if (grepl("exp_dmg", feat_det_txt) & dice_dmg_txt == "Use Average") {"exp_dmg"
+    } else if (grepl("exp_dmg", feat_det_txt) & dice_dmg_txt != "Use Average") {"avg_dmg"
+    } else if (grepl("dmg", feat_det_txt) & dice_dmg_txt != "Use Average"){dice
+    } else {stop("Error: check feat details and compare against prcs_nbr() function routing")}
+  
+  dice_ct <- if (main == "dice") {sub("^.*([0-9]+)d[0-9]{1,2}.*$", "\\1", dice_dmg_txt) |> as.numeric()}
+  dice_sd <- if (main == "dice") {sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()}
+  ###
+  ### NEED TO ACCOUNT FOR NEGATIVE MODIFIER - E.G. SIGN
+  ###
+  dice_sign <- if (main == "dice") {sub("^.*[0-9]+d[0-9]{1,2}\\s*(\\D+)[0-9]*$", "\\1", dice_dmg_txt)}
+  dice_sign <- if (main == "dice") {ifelse(grepl("\\+", dice_sign), 1, -1)}
+  dice_mod <- if (main == "dice") {sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()}
+  dice_sides <- c(4, 6, 8, 10, 12, 20)
+  dice_exp_dmg <- if (main == "exp_dmg") {dice_ct * (1 + dice_sd) / 2 + dice_sign * dice_mod}
+  
+  # if (mult) {
+  #   if (mult == 0.5) {
+  #     if (!dice_)
+  #   } else if (mult == 1.5) {
+  #     
+  #   }
+  # }
+  
+  
+  list("m" = mult_, "a" = add_, "s" = sub_, "dc" = dice_ct, "ds" = dice_sd, "n" = nbr_)
+}
+
+
+
 process_feat_txt_dtl <- function(inpt, typ, num, txt) {
   txt_ <- txt
   caret_strt_idx <- stri_locate_all(str = txt, regex = "<<")[[1]]#regex = "<<.+>>?")[[1]]
@@ -193,28 +247,34 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
       substring(txt, first = caret_idx[z, "start"], last = caret_idx[z, "end"])
     }, character(1L))
     
+    if (typ == "Minion") {
+      p_rep <- "min"
+      min_pasv <- inpt[[namify(typ, num, "minion_pasv")]]
+    } else {
+      tier_ <- inpt[["tier"]]
+      dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # NOTE: -MAY- =="Use Average"
+      exp_dmg <- 1 ### REVISE HERE
+      avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
+    }
+    
+    ### NEED A MEANS TO PROCESS THE DETAILS FURTHER FOR DESIRED PATTERN PLUGIN
     
     ###
     ### RESUME HERE - NOT CURRENTLY WORKING
     ###
-    ptrn_subs <- reactiveValues()
-    
-    for (z in 1:length(ptrns)) {
-      ptrn_subs[[z]] <- inpt[[namify(typ, num, gsub("<<|>>", "", ptrns[z]))]]
-    }
-    
+
     ###
-    ### ISSUE AT THE 'REPLACEMENT' STEP - NEED TO WORK OUT HOW TO ACCESS THE input$... ELEMENT
-    ### https://stackoverflow.com/questions/36841477/shiny-modules-how-to-access-the-input-of-a-looped-shiny-module ???
-    
-    access_rv = function(rv,field){
-      isolate(purrr::pluck(rv, field))#!!!field))
-    }
+    ### CURRENTLY NOT ABLE TO DIRECTLY PROCESS/WORK WITH THE REPLACEMENT PATTERNS AS DESIRED
+    ###
     
     for (z in 1:length(ptrns)) {
       txt_ <- 
         sub(pattern = ptrns[z], 
-            replacement = access_rv(ptrn_subs, z), 
+            replacement = 
+              if (ptrns[z] == "<<minion_pasv>>") { min_pasv
+              } else if (ptrns[z] == "tier") { tier_
+              } else if (ptrns[z] == "0.5x dmg") { dice_dmg ### NEEDS REVISION
+              } else { ptrns[z] },
             x = txt_)
     }
     
