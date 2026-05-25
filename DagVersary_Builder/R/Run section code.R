@@ -179,62 +179,88 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
 # function to input designated adversary-specific feature text details ---------
 # note: designated-input structure MUST be of the form '<<{DETAIL TEXT}>>'
 
-###
-### scenarios to develope for:
-### '{#}x dmg -/+ {#}' (MOD DICE IF DICE != "Use Average", ELSE USE AVG DMG; MAY HAVE ONLY THE MULT OR THE SUB/ADD)
-###  - {integer}x : simply adjust dice
-###  - 0.5x : reduce dice side by 1 (e.g. 1d6 -> 1d4) IF POSSIBLE, ELSE APPLY TO EXPECTED DAMAGE
-###  - 1.5x : increase dice side by 1
-### '{#}x exp_dmg' (CALC EXP DMG IF DICE, ELSE USE AVG DMG)
-### '{#}x tier' (MAY NOT HAVE MULT)
-
-# first: useful helper functions for processing the details
-
+# first: useful helper function for processing the details
+# function to process the detail text and return the 'populate' value with bold HTML formatting ----
 prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
+  f_d_t <- gsub("<<|>>", "", feat_det_txt)
   # note: {DETAIL TEXT} involving multiplication / addition / subtraction -always- has the below form
   # {#}x {#d#  for dice // # for average dmg // 'tier' for tier} -/+{#} ; may or may not have multiplier AND add/sub
-  mult <- grepl("x", feat_det_txt)
-  mult_ <- if (mult) {sub("^([0-9]+\\.{0,1}[0-9]*)x.*$", "\\1", feat_det_txt) |> as.numeric()}
-  pls <- grepl("\\+", feat_det_txt)
-  add_ <- if (pls) {sub("^.+\\+\\s*([0-9]+)$", "\\1", feat_det_txt) |> as.numeric()}
-  mns <- grepl("\\-", feat_det_txt)
-  sub_ <- if (mns) {sub("^.+\\-\\s*([0-9]+)$", "\\1", feat_det_txt) |> as.numeric()}
+  mult <- grepl("x", f_d_t)
+  mult_ <- if (mult) {sub("^([0-9]+\\.{0,1}[0-9]*)x.*$", "\\1", f_d_t) |> as.numeric()}
+  pls <- grepl("\\+", f_d_t)
+  add_ <- if (pls) {sub("^.+\\+\\s*([0-9]+)$", "\\1", f_d_t) |> as.numeric()}
+  mns <- grepl("\\-", f_d_t)
+  sub_ <- if (mns) {sub("^.+\\-\\s*([0-9]+)$", "\\1", f_d_t) |> as.numeric()}
   
-  main <- 
-    if (grepl("tier", feat_det_txt)) {"tier"
-    } else if (grepl("exp_dmg", feat_det_txt) & dice_dmg_txt == "Use Average") {"exp_dmg"
-    } else if (grepl("exp_dmg", feat_det_txt) & dice_dmg_txt != "Use Average") {"avg_dmg"
-    } else if (grepl("dmg", feat_det_txt) & dice_dmg_txt != "Use Average"){dice
+  res <- 
+    if (grepl("tier", f_d_t)) {"tier"
+    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
+    } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
+    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Avg") {"exp_dmg"
+    } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Average"){"dice"
     } else {stop("Error: check feat details and compare against prcs_nbr() function routing")}
   
-  dice_ct <- if (main == "dice") {sub("^.*([0-9]+)d[0-9]{1,2}.*$", "\\1", dice_dmg_txt) |> as.numeric()}
-  dice_sd <- if (main == "dice") {sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()}
-  ###
-  ### NEED TO ACCOUNT FOR NEGATIVE MODIFIER - E.G. SIGN
-  ###
-  dice_sign <- if (main == "dice") {sub("^.*[0-9]+d[0-9]{1,2}\\s*(\\D+)[0-9]*$", "\\1", dice_dmg_txt)}
-  dice_sign <- if (main == "dice") {ifelse(grepl("\\+", dice_sign), 1, -1)}
-  dice_mod <- if (main == "dice") {sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()}
-  dice_sides <- c(4, 6, 8, 10, 12, 20)
-  dice_exp_dmg <- if (main == "exp_dmg") {dice_ct * (1 + dice_sd) / 2 + dice_sign * dice_mod}
+  val_mod <- if (pls) {add_} else if (mns) {-sub_} else {0}
   
-  # if (mult) {
-  #   if (mult == 0.5) {
-  #     if (!dice_)
-  #   } else if (mult == 1.5) {
-  #     
-  #   }
-  # }
+  # processing for tier-based detail
+  if (res == "tier") {
+    tier_ <- as.numeric(tier) * ifelse(mult, mult_, 1) + val_mod
+    tier_detail <- paste0("<b>", ceiling(tier_), "</b>")
+  }
   
+  # processing for average damage-based detail
+  if (res == "avg_dmg") {
+    avg_dmg_ <- ceiling(avg_dmg * ifelse(mult, mult_, 1)) + val_mod
+    avg_dmg_detail <- paste0("<b>", avg_dmg_, "</b>")
+  }
   
-  list("m" = mult_, "a" = add_, "s" = sub_, "dc" = dice_ct, "ds" = dice_sd, "n" = nbr_)
+  # processing for dice-based detail
+  if (res %in% c("exp_dmg", "dice")) {
+    dice_ct <- sub("^.*([0-9]+)d[0-9]{1,2}.*$", "\\1", dice_dmg_txt) |> as.numeric()
+    dice_sd <- sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()
+    dice_sign <- sub("^.*[0-9]+d[0-9]{1,2}\\s*(\\D+)[0-9]*$", "\\1", dice_dmg_txt)
+    dice_sign <- ifelse(grepl("\\+", dice_sign), 1, -1)
+    dice_md <- sub("^.*[0-9]+d[0-9]{1,2}\\s*\\D+([0-9]*)$", "\\1", dice_dmg_txt)
+    dice_md <- ifelse(grepl("d", dice_md), 0, as.numeric(dice_md) * dice_sign)
+    dice_sides <- c(4, 6, 8, 10, 12, 20)
+    dice_exp_dmg <- if (res == "exp_dmg") {dice_ct * (1 + dice_sd) / 2 + dice_md}
+    dice_exp_dmg <- ceiling(if (mult) {mult_ * dice_exp_dmg} else {dice_exp_dmg}) + val_mod
+    
+    dice_side <- 
+      if (mult && mult_ == 0.5) {# go down a side (and keep count the same); offer not valid if using d4s
+        if (dice_sd == 4) {4} else {dice_sides[max(which(dice_sides < dice_sd))]}
+      } else if (mult && mult_ == 1.5) {# go up a side (and keep count the same); offers not valid if using d20s
+        if (dice_sd == 20) {20} else {dice_sides[min(which(dice_sides > dice_sd))]}
+      } else {dice_sd}
+    
+    dice_count <-
+      if (mult && ((mult_ == 0.5 & dice_sd > 4) | (mult_ == 1.5 & dice_sd < 20))) {dice_ct
+      } else if (mult) {ceiling(dice_ct * mult_)
+      } else {dice_ct}
+    
+    dice_mod <- 
+      if (mult && (mult_ == 0.5 & dice_sd == 4)){floor(mult_ * dice_md)
+      } else if (mult && (mult_ == 1.5 & dice_sd == 20)) {ceiling(mult_ * dice_md)
+      } else  if (mult) {ceiling(mult_ * dice_md)
+      } else (dice_md)
+    
+    dice_mod_txt <- if (dice_mod != 0){ifelse(dice_mod > 0, paste0("+", dice_mod), as.character(dice_mod))}
+    
+    dice_detail <- paste0("<b>", dice_count, "d", dice_side, dice_mod_txt, "</b>")
+    dice_exp_dmg <- paste0("<b>", dice_exp_dmg, "</b>")
+  }
+  
+  # payoff: processed output to plug in to the feature text
+  if (res == "tier"){tier_detail
+  } else if (res == "avg_dmg") {avg_dmg_detail
+  } else if (res == "exp_dmg") {dice_exp_dmg
+  } else if (res == "dice") {dice_detail}
 }
 
-
-
+# 'main' feat processing function to replace <<DETAIL>> with desired adversary detail ----
 process_feat_txt_dtl <- function(inpt, typ, num, txt) {
   txt_ <- txt
-  caret_strt_idx <- stri_locate_all(str = txt, regex = "<<")[[1]]#regex = "<<.+>>?")[[1]]
+  caret_strt_idx <- stri_locate_all(str = txt, regex = "<<")[[1]]
   caret_end_idx <- stri_locate_all(str = txt, regex = ">>")[[1]]
   
   if (!all(is.na(caret_strt_idx))) {
@@ -249,32 +275,21 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     
     if (typ == "Minion") {
       p_rep <- "min"
-      min_pasv <- inpt[[namify(typ, num, "minion_pasv")]]
+      min_pasv <- paste0("<b>", inpt[[namify(typ, num, "minion_pasv")]], "</b>")
     } else {
       tier_ <- inpt[["tier"]]
-      dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # NOTE: -MAY- =="Use Average"
-      exp_dmg <- 1 ### REVISE HERE
+      dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
       avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
     }
-    
-    ### NEED A MEANS TO PROCESS THE DETAILS FURTHER FOR DESIRED PATTERN PLUGIN
-    
-    ###
-    ### RESUME HERE - NOT CURRENTLY WORKING
-    ###
-
     ###
     ### CURRENTLY NOT ABLE TO DIRECTLY PROCESS/WORK WITH THE REPLACEMENT PATTERNS AS DESIRED
     ###
-    
     for (z in 1:length(ptrns)) {
       txt_ <- 
         sub(pattern = ptrns[z], 
             replacement = 
-              if (ptrns[z] == "<<minion_pasv>>") { min_pasv
-              } else if (ptrns[z] == "tier") { tier_
-              } else if (ptrns[z] == "0.5x dmg") { dice_dmg ### NEEDS REVISION
-              } else { ptrns[z] },
+              if (ptrns[z] == "<<minion_pasv>>") { min_pasv 
+              } else {prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_)},
             x = txt_)
     }
     
@@ -302,7 +317,8 @@ list_features <- function(inpt, typ, num) {
           what = rbind,
           args = lapply(1:length(feattypes_set()), \(z){
             data.frame(idx = z, typval = feattypes_set()[z],
-                       txt = process_feature(inpt, typ, num, z)  |> ### NEEDS TEST #)}) #
+                       # MOSTLY WORKING! LAST THING NEEDED - NEED TO RETAIN THE '<adversary>' text...
+                       txt = process_feature(inpt, typ, num, z)  |> 
                              process_feat_txt_dtl(inpt = inpt, typ = typ, num = num)) })
         )
       x <- x[x$typval > 0,]
