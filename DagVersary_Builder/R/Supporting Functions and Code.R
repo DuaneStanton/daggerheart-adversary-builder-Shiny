@@ -10,7 +10,7 @@ distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 
 # build adversary type count ---------------------------------------------------
 ###
-### ADD TOOLTIP WITH BRIEF OVERVIEW OF TYPE???
+### TODO: ADD TOOLTIP WITH BRIEF OVERVIEW OF TYPE???
 ###
 build_adv_count <- function(typ) {
   tags$div(class = "adv-count-sel",
@@ -63,11 +63,19 @@ stat_ref_df$dice_pool_lst <-
 feat_ref_df <- 
   read.csv("Daggerheart adversary feature lookup.csv") |> 
   # expand so 1 row per type/tier/feat
-  mutate(incl_t1 = grepl("1", adv_tiers),
-         incl_t2 = grepl("2", adv_tiers),
-         incl_t3 = grepl("3", adv_tiers),
-         incl_t4 = grepl("4", adv_tiers),
-         tier_ct = incl_t1 + incl_t2 + incl_t3 + incl_t4)
+  mutate(
+    incl_t1 = grepl("1", adv_tiers),
+    incl_t2 = grepl("2", adv_tiers),
+    incl_t3 = grepl("3", adv_tiers),
+    incl_t4 = grepl("4", adv_tiers),
+    tier_ct = incl_t1 + incl_t2 + incl_t3 + incl_t4,
+    feat_text = gsub("<adversary>", "&lt;adversary&gt;", feat_text)
+  )
+
+for (i in 1:nrow(feat_ref_df)) {
+  feat_ref_df$feat_text[i] <- 
+    gsub(paste0("<", feat_ref_df$adv_type[i], ">"), paste0("&lt;", feat_ref_df$adv_type[i], "&gt;"), feat_ref_df$feat_text[i])
+}
 
 ### TODO
 ### ABOVE:
