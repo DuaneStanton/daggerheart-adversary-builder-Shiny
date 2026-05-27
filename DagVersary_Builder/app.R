@@ -162,6 +162,12 @@ server <- function(input, output) {
     v
   })
   
+  ###
+  ### TODO: NEED AT MINIMUM AS MANY SEGMENTS AS FRAMEWORKS - PROVIDE MESSAGE IF THIS CONDITION IS NOT MET
+  ### TODO: PROVIDE A WARNING IF # FRAMEWORKS > 1
+  ### TODO: PROVIDE A MESSAGE THAT BATTLE POINTS BUDGET ISN'T REALLY APPLICABLE FOR COLOSSI - CREATE SOMETHING THAT FOLLOWS THE FICTION AND WILL BE FUN FOR YOUR CAMPAIGN!
+  ###
+  
   active_adv_ct_vec <- reactive({adv_ct_vec()[adv_ct_vec() > 0]})
   
   adv_total <- reactive({
@@ -237,9 +243,17 @@ server <- function(input, output) {
     lapply(seq_along(active_adv_ct_vec()), \(i) {
       lapply(1:active_adv_ct_vec()[i], \(j) {
         output[[i]] <- tagList()
-        output[[i]][[j]] <- 
-          div(class = "adv-input",
-              build_adv_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
+        
+        if (grepl("Colossus", names(active_adv_ct_vec())[i])) {
+          output[[i]][[j]] <- 
+            div(class = "adv-input",
+                build_colossus_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
+        } else {
+          output[[i]][[j]] <- 
+            div(class = "adv-input",
+                build_adv_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
+        }
+        
         output
       })
     })

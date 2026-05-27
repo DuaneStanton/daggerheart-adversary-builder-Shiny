@@ -87,3 +87,70 @@ build_adv_spec_ui <- function(typ, num, tr) {
     featurize(typ, num, 5)
   )
 }
+
+# UI distinct to Colossal adversaries ------------------------------------------
+
+###
+### TODO: TIE SEGMENTS TO TORSO NAME - ALLOW SELECTINPUT WHERE NAME FROM FRAMEWORK IS, INCLUDE PLACEHOLDER IF EMPTY
+###
+
+# note: multi_frame is an under-consideration element to allow designing/running multiple colossi in a single instance - may be removed
+build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
+  div(
+    h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
+    div(title = "Framework: name of colossus; Segment: name of colossus part (and # of this part)",
+        textify(typ, num, "name", paste0(sub("segment", "sgmt", typ), "_", num, " (name)"), "250px")),
+    if (grepl("framework", typ)) {
+      textify(typ, num, "desc", "A brief description of the adversary", "400px") },
+    textify(typ, num, "mottac_adj1", 
+            ifelse(grepl("framework", typ), "Motive/tactic 1", "Adjacent segment type 1"), "200px"),
+    textify(typ, num, "mottac_adj2", 
+            ifelse(grepl("framework", typ), "Motive/tactic 2", "Adjacent segment type 2"), "200px"),
+    textify(typ, num, "mottac_adj3", 
+            ifelse(grepl("framework", typ), "Motive/tactic 3", "Adjacent segment type 3"), "200px"),
+    textify(typ, num, "mottac_adj4", 
+            ifelse(grepl("framework", typ), "Motive/tactic 4", "Adjacent segment type 4"), "200px"),
+    if (grepl("framework", typ)) { # framework
+      fluidRow(
+        column(width = 12, offset = 0,
+               div(class = "bottom-aligned",
+                   div(textify(typ, num, "sz", "Size (height, width)")),
+                   div(numerify(stat_ref_df, tr, typ, num, "thresh_maj", "Major Threshold", "thresh_maj_md", "150px")), 
+                   div(numerify(stat_ref_df, tr, typ, num, "thresh_sev", "Severe Threshold", "thresh_sev_md", "170px")),
+                   div(numerify(stat_ref_df, tr, typ, num, "stress", "Stress", "stress_md", "60px", "60px")))
+        ))
+    } else { # segment
+      fluidRow(
+        column(width = 12, offset = 0,
+               div(class = "bottom-aligned",
+                   div(numerify(stat_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
+                   div(title = "HP per each segment of this type", numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")) )
+        ))
+    },
+    if (grepl("framework", typ)) {textify(typ, num, "exp", "Experience(s)", "350px")
+    } else {
+      fluidRow(
+        column(width = 12, offset = 0,
+               div(class = "bottom-aligned",
+                   div(numerify(stat_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
+                   div(textify(typ, num, "wpn", "Weapon", "140px")),
+                   div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
+                   dmg_dice_pooler(stat_ref_df, tr, typ, num, "dmg_dice"),
+                   numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
+                   div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) ))
+      )
+      },
+    ###
+    ### TODO: frameworks -always- have the Colossal Power reaction (make feature 1); everything else is modifiable
+    ###       LIKELY NEED TO ENFORCE THIS IN THE 'Run section code'
+    featurize(typ, num, 1, 
+              nm_val = ifelse(grepl("framework", typ), "Colossal Power", ""),
+              ft_sel = if (grepl("framework", typ)) {"Reaction"},
+              dsc_val = ifelse(grepl("framework", typ), "When &lt;the colossus&gt; fails an attack, you gain a Fear.", "")),
+    featurize(typ, num, 2),
+    featurize(typ, num, 3),
+    featurize(typ, num, 4),
+    featurize(typ, num, 5)
+    
+  )
+  }

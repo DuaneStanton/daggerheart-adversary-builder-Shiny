@@ -4,7 +4,8 @@ library(dplyr) # needed here for data.frame processing
 
 # values used in multiple places in the app ------------------------------------
 adv_types <- 
-  c("Bruiser", "Horde", "Leader", "Minion", "Ranged", "Skulk", "Solo", "Standard", "Support", "Social")
+  c("Bruiser", "Horde", "Leader", "Minion", "Ranged", "Skulk", "Solo", "Standard", "Support", "Social",
+    "Colossus framework", "Colossus average segment", "Colossus strong segment")
 tier_vals <- 1:4
 distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 
