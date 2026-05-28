@@ -5,7 +5,7 @@ library(dplyr) # needed here for data.frame processing
 # values used in multiple places in the app ------------------------------------
 adv_types <- 
   c("Bruiser", "Horde", "Leader", "Minion", "Ranged", "Skulk", "Solo", "Standard", "Support", "Social",
-    "Colossus framework", "Colossus average segment", "Colossus strong segment")
+    "Colossus_framework", "Colossus_average_segment", "Colossus_strong_segment")
 tier_vals <- 1:4
 distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 
@@ -15,7 +15,8 @@ distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 ###
 build_adv_count <- function(typ) {
   tags$div(class = "adv-count-sel",
-  numericInput(inputId = paste0(typ, "_count"), label = paste0("# ", typ, "s"),
+  numericInput(inputId = paste0(typ, "_count"), 
+               label = paste0("# ", gsub("_", " ", typ), "s"),
                value = 0, min = 0, step = 1),
   style="display:inline-block")
 }
@@ -52,6 +53,7 @@ stat_ref_df <-
   read.csv("dagversary_stats_reference.csv") |> 
   mutate(
     across(.cols = ends_with("_rng"), .fns = calc_midpt, .names = "{.col}_md"),
+    adv_type = gsub(" ", "_", adv_type)
   )
 md_cols_idx <- grep("_rng_md", colnames(stat_ref_df))
 colnames(stat_ref_df)[md_cols_idx] <- sub("_rng", "", colnames(stat_ref_df)[md_cols_idx])
@@ -65,6 +67,7 @@ feat_ref_df <-
   read.csv("Daggerheart adversary feature lookup.csv") |> 
   # expand so 1 row per type/tier/feat
   mutate(
+    adv_type = gsub(" ", "_", adv_type),
     incl_t1 = grepl("1", adv_tiers),
     incl_t2 = grepl("2", adv_tiers),
     incl_t3 = grepl("3", adv_tiers),

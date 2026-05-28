@@ -99,7 +99,8 @@ ui <- fluidPage(
                uiOutput("adv_counts", 
                         label = "Specify the # of adversaries by type"),
                htmlOutput("warning_battle_points"),
-               htmlOutput("battle_points")
+               htmlOutput("battle_points"),
+               htmlOutput("colossus_note")
                ),
       tabPanel("Customize",
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
@@ -209,6 +210,8 @@ server <- function(input, output) {
   output$warning_battle_points <- renderText({
     if (btl_pts_adv() > btl_pts_bdgt()) {
       "<p style ='color: red'><b><i>Current 'battle points' > your 'budget' - may be tougher than design intended</i></b></p>"
+    } else if (sum(adv_ct_vec()) > 0 && any(grepl("Colossus", names(active_adv_ct_vec())))) {
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>'battle points' budget is meant for non-Colossus-including encounters; a Colossus can be its own encounter. If adding other adversaries think of how they may interact with the Colossus.</i></b>"
     }
   })
   
@@ -220,6 +223,16 @@ server <- function(input, output) {
              "; 'budget': ", btl_pts_bdgt(), "</i></p>")
       }
     })
+  
+  output$colossus_note <- renderText({
+    if (sum(adv_ct_vec()) > 0 && any(grepl("Colossus", names(active_adv_ct_vec()))) & adv_ct_vec()["Colossus_framework"] == 0) {
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>Any encounter with a Colossus should include a Colossus framework and multiple segments.</i></b>"
+    } else if (sum(adv_ct_vec()) > 0 && adv_ct_vec()["Colossus_framework"] > 1 && adv_ct_vec()["Colossus_average_segment"] + adv_ct_vec()["Colossus_strong_segment"] >= adv_ct_vec()["Colossus_framework"]) {
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>If using multiple Colossus frameworks, make to specify which framework each segment type is tied to.</i></b>"
+    } else if (sum(adv_ct_vec()) > 0 && (adv_ct_vec()["Colossus_average_segment"] + adv_ct_vec()["Colossus_strong_segment"] < adv_ct_vec()["Colossus_framework"])) {
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>Each Colossus framework should have at least one segment (probably more per framework).</i></b>"
+    }
+  })
   
   # server Customize panel -----------------------------------------------------
   dmg_add <- reactive({
@@ -247,7 +260,8 @@ server <- function(input, output) {
         if (grepl("Colossus", names(active_adv_ct_vec())[i])) {
           output[[i]][[j]] <- 
             div(class = "adv-input",
-                build_colossus_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
+                build_colossus_spec_ui(names(active_adv_ct_vec())[i], j, input$tier,
+                                       multi_frame = adv_ct_vec()["Colossus_framework"] > 1) )
         } else {
           output[[i]][[j]] <- 
             div(class = "adv-input",
@@ -255,17 +269,10 @@ server <- function(input, output) {
         }
         
         output
+        })
       })
     })
-  ### NEED TO CREATE TEMPLATE FOR TYPE-APPROPRIATE MOTIVE/TACTIC DEFAULTS
-  ### CREATE MULTIPLE SETS TO APPLY FOR EACH TYPE AND ALLOW USER TO CHECK BOX FOR RANDOMIZED
-    })
   
-  ###
-  ### WORKING CODE ABOVE HERE, IN-DEVELOPMENT CODE BELOW
-  ###
-
-  #### WORK IN PROGRESS
   feat_df <- reactive({ # note: already sorted by type, then tier, then passive/action/reaction, then feat name
     req(active_adv_ct_vec())
     filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
@@ -278,9 +285,8 @@ server <- function(input, output) {
     }
   })
   
-  obsvr <- reactive({list(active_adv_ct_vec(), input$feat_fill_ct)})
+  feat_obsvr <- reactive({list(active_adv_ct_vec(), input$feat_fill_ct)})
   
-  ###
   # function to streamline the update...Input process
   update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx = NULL) {
     updateTextInput(inputId = namify(adv_nm, adv_num, paste0("featname_", inpt_num)),
@@ -329,23 +335,11 @@ server <- function(input, output) {
       }
       feat_mat
     } else {feat_mat}
-    
-    ### RESUME HERE? - ROWS ARE SAME-TYPE ADVERSARY, COLS ARE FEATURE DF INDICES
-    
   }
   
-  # 
-  ###
-  ### NEED TO RETHINK LOGIC - CURRENTLY POPULATES UP TO SET #, BUT WON'T CLEAR
-  ### 1) CHECK FEAT FILL COUNT (0 / >0 SPLIT)
-  ### 2) ADVERSARY TYPE SPLIT
-  ### 3a) 0 SPLIT: (RE)SET ALL TO DEFAULTS
-  ### 3b) >0 SPLIT: FILL UP TO COUNT -AND- (RE)SET ALL > COUNT TO DEFAULTS
-  ###
-  ### ...4) ONCE THE ABOVE IS WORKING, REFACTOR/MOVE CODE TO DEDICATED R SCRIPT OUTSIDE OF app.R???
-  ###
-  observeEvent(obsvr(), {
-    req(active_adv_ct_vec(),#sum(adv_ct_vec()) > 0, ## JUST active_adv_ct_vec() AND NO '>'????
+  # populate features appropriate to adversary type when user indicates >0 features to fill ----
+  observeEvent(feat_obsvr(), {
+    req(active_adv_ct_vec(),
         input$feat_fill_ct)
     if (input$feat_fill_ct > 0) {
       for (i in 1:length(active_adv_ct_vec())) { # per adversary type
@@ -362,26 +356,26 @@ server <- function(input, output) {
           } else if (adv_nm_ == "Horde") {
             fill_horde_feat(j, feat_df()[feat_df()$adv_type == adv_nm_,]) 
             ###
-            ### MAY NEED TROUBLESHOOT - SOMETIMES DUPLICATES ENTRIES ; MORE FEATURES AT LOWER LEVELS WOULD MINIMIZE RISK
+            ### MAY NEED TROUBLESHOOT - SOMETIMES DUPLICATES ENTRIES WHEN FEW OPTIONS ; MORE FEATURES AT LOWER LEVELS WOULD MINIMIZE RISK
             ###
             if (input$feat_fill_ct > 1) { # populate as available
               if (nrow(horde_df()) >= (as.numeric(input$feat_fill_ct) - 1)) {
                 
                 feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
-                  feat_sampler_idx(adv_ct_, filter(horde_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct) - 1)
+                  feat_sampler_idx(adv_ct_, 
+                                   filter(horde_df(), adv_type == adv_nm_), 
+                                   as.numeric(input$feat_fill_ct) - 1)
 
                 for (k in 2:as.numeric(input$feat_fill_ct)) {
                   update_inputs(adv_nm_, j, k, horde_df(), feat_idx_mat[j, k - 1])
                 }
               }
             }
-            ##
             if (as.numeric(input$feat_fill_ct) < 5) {
               for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
                 update_inputs(adv_nm_, j, k, data.frame(), NULL)
               }
             }
-            ##
             
           } else {### non-Horde, non-Minion set
             for (k in 1:as.numeric(input$feat_fill_ct)) {
@@ -393,6 +387,7 @@ server <- function(input, output) {
               }
             }
           }
+          ### ADD COLOSSUS FRAMEWORK EXCEPTION FOR FEATURE 1 AS FIXED???
         }
       }
     } else if (input$feat_fill_ct == 0) { # reset to defaults
@@ -408,9 +403,42 @@ server <- function(input, output) {
     }
   })
   
+  # Colossus-specific case when multiple frameworks active ---------------------
+  col_fw_names <- reactive({
+    req(active_adv_ct_vec())
+    if (adv_ct_vec()["Colossus_framework"] > 1) {
+      lapply(1:(adv_ct_vec()["Colossus_framework"]), \(i) {
+        input[[namify("Colossus_framework", i, "name")]]
+      }) |> unlist()
+    } else {"At most 1 Colossus framework"}
+  })
   
-  ####
-  
+  observeEvent(col_fw_names(), {
+    #req(active_adv_ct_vec())
+    col_frame_ct <- adv_ct_vec()["Colossus_framework"]
+    
+    if (col_frame_ct > 1 & any(col_fw_names() != "")) {
+      avg_col_segmt_ct <- adv_ct_vec()["Colossus_average_segment"]
+      if (avg_col_segmt_ct > 0) {
+        for (i in 1:avg_col_segmt_ct) { 
+          updateSelectInput(
+            inputId = namify("Colossus_average_segment", i, "parent_frame"),
+            choices = col_fw_names(), 
+            selected = NULL) 
+          }
+      }
+      
+      str_col_segmt_ct <- adv_ct_vec()["Colossus_strong_segment"]
+      if (str_col_segmt_ct > 0) {
+        for (i in 1:str_col_segmt_ct) {
+          updateSelectInput(
+            inputId = namify("Colossus_strong_segment", i, "parent_frame"),
+            choices = col_fw_names(),
+            selected = NULL)
+        }
+      }
+    }
+  })
   
   # server Run panel -----------------------------------------------------------
   output$adv_run <- 

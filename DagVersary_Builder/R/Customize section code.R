@@ -102,6 +102,9 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
         textify(typ, num, "name", paste0(sub("segment", "sgmt", typ), "_", num, " (name)"), "250px")),
     if (grepl("framework", typ)) {
       textify(typ, num, "desc", "A brief description of the adversary", "400px") },
+    if (grepl("segment", typ) && multi_frame) {
+      selectInput(namify(typ, num, "parent_frame"), label = "Associated framework", choices = "give Colossus frameworks names", selected = "give Colossus frameworks names", width = "300px")
+    },
     textify(typ, num, "mottac_adj1", 
             ifelse(grepl("framework", typ), "Motive/tactic 1", "Adjacent segment type 1"), "200px"),
     textify(typ, num, "mottac_adj2", 

@@ -13,6 +13,10 @@ list_adv_desc <- function(inpt, typ, num) {
   paste0(ifelse(dsc() == "","The most foul, cruel, and bad-tempered rodent you ever set eyes on", dsc()))
 }
 
+###
+### TODO: FOR COLOSSAL ADVERSARIES, FILL NULL WITH DETAILS FOR Trogdor, the Burninator
+###
+
 list_motives_tactics <- function(inpt, typ, num) {
   mt1 <- reactive({inpt[[namify(typ, num, "mottac1")]]})
   mt2 <- reactive({inpt[[namify(typ, num, "mottac2")]]})
