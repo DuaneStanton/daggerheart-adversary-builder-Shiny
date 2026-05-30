@@ -105,14 +105,22 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
     if (grepl("segment", typ) && multi_frame) {
       selectInput(namify(typ, num, "parent_frame"), label = "Associated framework", choices = "give Colossus frameworks names", selected = "give Colossus frameworks names", width = "300px")
     },
-    textify(typ, num, "mottac_adj1", 
-            ifelse(grepl("framework", typ), "Motive/tactic 1", "Adjacent segment type 1"), "200px"),
-    textify(typ, num, "mottac_adj2", 
-            ifelse(grepl("framework", typ), "Motive/tactic 2", "Adjacent segment type 2"), "200px"),
-    textify(typ, num, "mottac_adj3", 
-            ifelse(grepl("framework", typ), "Motive/tactic 3", "Adjacent segment type 3"), "200px"),
-    textify(typ, num, "mottac_adj4", 
-            ifelse(grepl("framework", typ), "Motive/tactic 4", "Adjacent segment type 4"), "200px"),
+    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Arm' if this segment is 'Body')"},
+      textify(typ, num, "mottac_adj1", 
+      ifelse(grepl("framework", typ), "Motive/tactic 1", "Adjacent segment type 1"), "200px")
+      ),
+    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Leg' if this segment is 'Body')"},
+        textify(typ, num, "mottac_adj2", 
+                ifelse(grepl("framework", typ), "Motive/tactic 2", "Adjacent segment type 2"), "200px")
+    ),
+    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Tail' if this segment is 'Body')"},
+        textify(typ, num, "mottac_adj3", 
+                ifelse(grepl("framework", typ), "Motive/tactic 3", "Adjacent segment type 3"), "200px")
+    ),
+    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Body' if this segment is 'Arm')"},
+        textify(typ, num, "mottac_adj4", 
+                ifelse(grepl("framework", typ), "Motive/tactic 4", "Adjacent segment type 4"), "200px")
+    ),
     if (grepl("framework", typ)) { # framework
       fluidRow(
         column(width = 12, offset = 0,

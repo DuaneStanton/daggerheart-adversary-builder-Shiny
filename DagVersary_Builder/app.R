@@ -107,7 +107,8 @@ ui <- fluidPage(
                htmlOutput("dmg_note"),
                div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
                    selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
-               uiOutput("adv_spec")
+               uiOutput("adv_spec"),
+               textOutput("colchk") ###
                ), 
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
@@ -440,22 +441,45 @@ server <- function(input, output) {
     }
   })
   
+  # organize Colossus elements by framework membership -------------------------
+  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec())}) ### MAKE REACTIVE???
+  
+  output$colchk <- renderText(paste(colossus_groupset(), collapse = ", ")) ###
+  
   # server Run panel -----------------------------------------------------------
+  adv_runset <- reactive({
+    req(active_adv_ct_vec())
+    c(
+    # Colossi first
+      if (length(colossus_groupset()) > 0L) {colossus_groupset},
+    # then non-Colossi
+    lapply(1:length(active_adv_ct_vec()), \(z) {
+      paste0(names(active_adv_ct_vec())[z], "_", 1:active_adv_ct_vec()[z])
+    }) |> unlist(recursive = FALSE)
+    )
+  })
+  
   output$adv_run <- 
     renderUI({
-      req(active_adv_ct_vec())
-      output = tagList()
+      req(adv_runset())
+      output <- tagList()
       
-      lapply(seq_along(active_adv_ct_vec()), \(i) {
-        lapply(1:active_adv_ct_vec()[i], \(j) {
-          output[[i]] <- tagList()
-          output[[i]][[j]] <- 
-            div(class = "adv-run",
-                column(12,
-                build_adv_run_ui(input, names(active_adv_ct_vec())[i], j, input$tier) )
+      lapply(1:length(adv_runset()), \(i) {
+        output[[i]] <- 
+          if (grepl("Colossus_framework", adv_runset()[i])) {
+            div(class = "adv-run-colossus-fw",
+                column(12, build_colossus_fw_run_ui(inpt, adv_runset()[i], input$tier))
             )
-          output
-        })
+          } else if (grepl("Colossus", adv_runset()[i]) & grepl("segment", adv_runset()[i])) {
+            div(class = "adv-run-colossus-sg",
+                column(12, build_colossus_sg_run_ui(inpt, adv_runset()[i], input$tier))
+            )
+          } else {
+            div(class = "adv-run",
+                column(12, build_adv_run_ui(input, adv_runset()[i], input$tier))
+            )
+          }
+        output
       })
     })
   
