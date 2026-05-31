@@ -97,8 +97,8 @@ build_adv_spec_ui <- function(typ, num, tr) {
 # note: multi_frame is an under-consideration element to allow designing/running multiple colossi in a single instance - may be removed
 build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
   div(
-    h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
-    div(title = "Framework: name of colossus; Segment: name of colossus part (and # of this part)",
+    h3(renderText({paste0("Tier ", tr, " ", gsub("_", " ", typ), " (#", num, ")")})),
+    div(title = "Framework: name of colossus; Segment: name of colossus part (e.g. 'Mountainbreaker Left Arm')",
         textify(typ, num, "name", paste0(sub("segment", "sgmt", typ), "_", num, " (name)"), "250px")),
     if (grepl("framework", typ)) {
       textify(typ, num, "desc", "A brief description of the adversary", "400px") },

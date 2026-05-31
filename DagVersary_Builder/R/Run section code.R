@@ -4,7 +4,7 @@ list_adv_name <- function(inpt, typ, num, tr) {
   nm <- reactive({inpt[[namify(typ, num, "name")]]})
   paste0("<b><span style=font-size: 2em;>", 
          ifelse(nm() == "", "Adversary", nm()), 
-         "</spanp></b><span> (T", tr, " ", typ, " \u0023", num, ")</span>",
+         "</spanp></b><span> (T", tr, " ", gsub("_", " ", typ), " \u0023", num, ")</span>",
          if (typ == "Horde"){paste0(" <span>(", inpt[[namify(typ, num, "perhp")]], "/HP)</span>")})
 }
 
@@ -228,7 +228,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
     dice_md <- ifelse(grepl("d", dice_md), 0, as.numeric(dice_md) * dice_sign)
     dice_sides <- c(4, 6, 8, 10, 12, 20)
     dice_exp_dmg <- if (res == "exp_dmg") {dice_ct * (1 + dice_sd) / 2 + dice_md}
-    dice_exp_dmg <- ceiling(if (mult) {mult_ * dice_exp_dmg} else {dice_exp_dmg}) + val_mod
+    dice_exp_dmg <- if (res == "exp_dmg") {ceiling(if (mult) {mult_ * dice_exp_dmg} else {dice_exp_dmg}) + val_mod}
     
     dice_side <- 
       if (mult && mult_ == 0.5) {# go down a side (and keep count the same); offer not valid if using d4s
@@ -452,7 +452,7 @@ list_motives_tactics_adjacent_sgmt <- function(inpt, typ, num) {
   }
 }
 
-list_stats_fw <- function(input, typ, num) {
+list_stats_fw <- function(inpt, typ, num) {
   df_ <- reactive({
     tibble(
       Size = inpt[[namify(typ, num, "sz")]],
@@ -464,7 +464,7 @@ list_stats_fw <- function(input, typ, num) {
   renderTable({df_()}, align = "c")
 }
 
-list_stats_sg <- function(input, typ, num) {
+list_stats_sg <- function(inpt, typ, num) {
   atk_txt <- reactive({ifelse(inpt[[namify(typ, num, "atk")]] > -1, 
                               paste0("+", inpt[[namify(typ, num, "atk")]]),
                               inpt[[namify(typ, num, "atk")]])})
@@ -498,11 +498,12 @@ list_stats_sg <- function(input, typ, num) {
   })
   
   df_ <- reactive({
+    tbl_ <- 
     tibble(
-      Diff = inpt[[namify(typ, num, "diff")]],
-      ATK = atk_txt(),
-      !!sym(wpn_txt_lbl()) := wpn_txt()
-    )
+      Diff = inpt[[namify(typ, num, "diff")]], ATK = atk_txt(), wpn = wpn_txt()
+      )
+    colnames(tbl_)[3] <- wpn_txt_lbl()
+    tbl_
   })
   
   renderTable({df_()}, align = "c")
@@ -523,7 +524,7 @@ msg_stress <- function(inpt, typ, num, dftd = FALSE) {
 
 msg_hp <- function(inpt, typ, num, dftd = FALSE) {
   msg <- reactive({
-    if (!dftd | inpt[[namify(typ, num, "hp_run")]] == 0) {
+    if (dftd | inpt[[namify(typ, num, "hp_run")]] == 0) {
       "<p style ='color: #9300CF; font-size: 25px; text-align: center;'><b>DEFEATED!</b></p>"}
   })
   
@@ -539,9 +540,6 @@ build_colossus_fw_run_ui <- function(inpt, col_elemname, tr) {
                     list_motives_tactics_adjacent_sgmt(inpt, a.t(col_elemname), a.n(col_elemname)),
                     fluidRow(list_stats_fw(inpt, a.t(col_elemname), a.n(col_elemname)))
     )),
-    ###
-    fluidRow(column(width = 12, msg_hp_stress(inpt, a.t(col_elemname), a.n(col_elemname)))),
-    ###
     fluidRow(
       column(width = 3, 
              div(class = "inline",
@@ -554,7 +552,7 @@ build_colossus_fw_run_ui <- function(inpt, col_elemname, tr) {
       ### TODO: AUTO-CHECK VULNERABLE BOX WHEN STRESS  = 0 ; MODIFY STRESSED MESSAGE TO REMOVE VULNERABLE TEXT
       column(width = 9,
              div(class = "inline",
-                 msg_stress(inpt, typ, num, dftd = FALSE) ) ### IF ACTIVATED, 'dftd' NEEDS INPUT FROM THE  SERVER --> FROM THE build_colossus_fw_run_ui LEVEL WITH A SERVER-INTERNAL REACTIVE/OBSERVER
+                 msg_stress(inpt, a.t(col_elemname), a.n(col_elemname), dftd = FALSE) ) ### IF ACTIVATED, 'dftd' NEEDS INPUT FROM THE  SERVER --> FROM THE build_colossus_fw_run_ui LEVEL WITH A SERVER-INTERNAL REACTIVE/OBSERVER
       ) ),
     fluidRow(column(width = 12, list_features(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(column(width = 12, msg_status(inpt, a.t(col_elemname), a.n(col_elemname)))),
@@ -571,12 +569,13 @@ build_colossus_sg_run_ui <- function(inpt, col_elemname, tr) {
   div(
     fluidRow(column(width = 12,
                     fluidRow(renderUI({HTML(list_adv_name(inpt, a.t(col_elemname), a.n(col_elemname), tr))})),
-                    list_motives_tactics_adjacent_sgmt(inpt, a.t(col_elemname), a.n(col_elemname)),
-                    fluidRow(list_stats_sg(inpt, a.t(col_elemname), a.n(col_elemname)))
+                    list_motives_tactics_adjacent_sgmt(inpt, a.t(col_elemname), a.n(col_elemname))
     )),
-    fluidRow(column(width = 12, msg_hp_stress(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(
-      column(width = 3, 
+      column(width = 3,
+             div(class = "inline", fluidRow(list_stats_sg(inpt, a.t(col_elemname), a.n(col_elemname))))
+      ),
+      column(width = 2, offset = 1, 
              div(class = "inline",
                  selectInput(namify(a.t(col_elemname), a.n(col_elemname), "hp_run"), 
                              label = "HP", 
@@ -584,10 +583,12 @@ build_colossus_sg_run_ui <- function(inpt, col_elemname, tr) {
                              selected = inpt[[namify(a.t(col_elemname), a.n(col_elemname), "hp")]], 
                              width = "70px"))
       ),
-      column(width = 9,
+      column(width = 6,
              div(class = "inline",
-                 msg_hp(inpt, typ, num, dftd = FALSE) ) ### IF ACTIVATED, 'dftd' NEEDS INPUT FROM THE  SERVER --> FROM THE build_colossus_fw_run_ui LEVEL WITH A SERVER-INTERNAL REACTIVE/OBSERVER
-      ) ),
+                 msg_hp(inpt, a.t(col_elemname), a.n(col_elemname), dftd = FALSE) ) ### IF ACTIVATED, 'dftd' NEEDS INPUT FROM THE  SERVER --> FROM THE build_colossus_fw_run_ui LEVEL WITH A SERVER-INTERNAL REACTIVE/OBSERVER
+      )
+      
+    ),
     fluidRow(column(width = 12, list_features(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(column(width = 12, msg_status(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(div(class="inline",
@@ -597,41 +598,3 @@ build_colossus_sg_run_ui <- function(inpt, col_elemname, tr) {
     fluidRow(textify(a.t(col_elemname), a.n(col_elemname), "custom_cond", placehold = "Type custom conditions here"))
   )
 }
-
-# build_colossus_run_ui <- function(inpt, col_elemname, tr) {
-#   div(
-#     fluidRow(column(width = 12,
-#                     fluidRow(renderUI({HTML(list_adv_name(inpt, a.t(col_elemname), a.n(col_elemname), tr))})),
-#                     fluidRow(list_adv_desc(inpt, a.t(col_elemname), a.n(col_elemname))),
-#                     list_motives_tactics(inpt, a.t(col_elemname), a.n(col_elemname)),
-#                     fluidRow(list_stats_1(inpt, a.t(col_elemname), a.n(col_elemname)))
-#     )),
-#     fluidRow(column(width = 12, msg_hp_stress(inpt, a.t(col_elemname), a.n(col_elemname)))),
-#     fluidRow(
-#       column(width = 3, 
-#              div(class = "inline",
-#                  selectInput(namify(a.t(col_elemname), a.n(col_elemname), "hp_run"), 
-#                              label = "HP", 
-#                              choices = c(0:inpt[[namify(a.t(col_elemname), a.n(col_elemname), "hp")]]), 
-#                              selected = inpt[[namify(a.t(col_elemname), a.n(col_elemname), "hp")]], 
-#                              width = "70px"))
-#       ),
-#       ### TODO: AUTO-CHECK VULNERABLE BOX WHEN STRESS  = 0 ; MODIFY STRESSED MESSAGE TO REMOVE VULNERABLE TEXT
-#       column(width = 3,
-#              div(class = "inline",
-#                  selectInput(namify(a.t(col_elemname), a.n(col_elemname), "stress_run"), 
-#                              label = "Stress", 
-#                              choices = c(0:inpt[[namify(a.t(col_elemname), a.n(col_elemname), "stress")]]), 
-#                              selected = inpt[[namify(a.t(col_elemname), a.n(col_elemname), "stress")]], 
-#                              width = "70px"))
-#       ) ),
-#     fluidRow(column(width = 12, list_features(inpt, a.t(col_elemname), a.n(col_elemname)))),
-#     fluidRow(column(width = 12, msg_status(inpt, a.t(col_elemname), a.n(col_elemname)))),
-#     fluidRow(div(class="inline",
-#                  checkboxGroupInput(namify(a.t(col_elemname), a.n(col_elemname), "conds"), 
-#                                     label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable"), 
-#                                     inline = TRUE))),
-#     fluidRow(textify(a.t(col_elemname), a.n(col_elemname), "custom_cond", placehold = "Type custom conditions here"))
-#   )
-# }
-

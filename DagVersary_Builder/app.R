@@ -32,14 +32,26 @@ ui <- fluidPage(
     }
     .adv-run {
       display: flex;
-      border: 4px solid #320e45;
-      background: #d3bee8;
-      color: #320e45;
       padding-left: 5px;
       margin-left: 5px;
       padding-right: 5px;
       margin-right: 5px;
       width: 710px;
+    }
+    .adv-run-gen {
+      border: 4px solid #320e45;
+      background: #d3bee8;
+      color: #320e45;
+    }
+    .adv-run-colossus-fw {
+      border: 4px solid #320e45;
+      background: #afa9e8;
+      color: #320e45;
+    }
+    .adv-run-colossus-sg {
+      border: 4px solid #320e45;
+      background: #c2bee8;
+      color: #320e45;
     }
     .shiny-html-output .shiny-bound-output {
       margin-right: 5px;
@@ -444,20 +456,24 @@ server <- function(input, output) {
   # organize Colossus elements by framework membership -------------------------
   colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec())}) ### MAKE REACTIVE???
   
-  output$colchk <- renderText(paste(colossus_groupset(), collapse = ", ")) ###
-  
   # server Run panel -----------------------------------------------------------
   adv_runset <- reactive({
     req(active_adv_ct_vec())
+    non_colossi <- active_adv_ct_vec()[!grepl("Colossus", names(active_adv_ct_vec()))]
+    
     c(
     # Colossi first
-      if (length(colossus_groupset()) > 0L) {colossus_groupset},
+      if (length(colossus_groupset()) > 0L) {colossus_groupset()},
     # then non-Colossi
-    lapply(1:length(active_adv_ct_vec()), \(z) {
-      paste0(names(active_adv_ct_vec())[z], "_", 1:active_adv_ct_vec()[z])
-    }) |> unlist(recursive = FALSE)
+      if (length(non_colossi) > 0L) {
+        lapply(1:length(non_colossi), \(z) {
+          paste0(names(non_colossi)[z], "_", 1:(non_colossi[z]))
+        }) |> unlist(recursive = FALSE)
+      }
     )
   })
+  
+  output$colchk <- renderText(paste(adv_runset(), collapse = ", ")) ###
   
   output$adv_run <- 
     renderUI({
@@ -467,15 +483,15 @@ server <- function(input, output) {
       lapply(1:length(adv_runset()), \(i) {
         output[[i]] <- 
           if (grepl("Colossus_framework", adv_runset()[i])) {
-            div(class = "adv-run-colossus-fw",
-                column(12, build_colossus_fw_run_ui(inpt, adv_runset()[i], input$tier))
+            div(class = "adv-run adv-run-colossus-fw",
+                column(12, build_colossus_fw_run_ui(input, adv_runset()[i], input$tier))
             )
-          } else if (grepl("Colossus", adv_runset()[i]) & grepl("segment", adv_runset()[i])) {
-            div(class = "adv-run-colossus-sg",
-                column(12, build_colossus_sg_run_ui(inpt, adv_runset()[i], input$tier))
+          } else if (grepl("Colossus_.+_segment", adv_runset()[i])) {
+            div(class = "adv-run adv-run-colossus-sg",
+                column(12, build_colossus_sg_run_ui(input, adv_runset()[i], input$tier))
             )
           } else {
-            div(class = "adv-run",
+            div(class = "adv-run adv-run-gen",
                 column(12, build_adv_run_ui(input, adv_runset()[i], input$tier))
             )
           }
