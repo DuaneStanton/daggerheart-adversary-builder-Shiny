@@ -1,16 +1,16 @@
 # code for the Run tab =========================================================
 # UI for Run tab per adversary -------------------------------------------------
 list_adv_name <- function(inpt, typ, num, tr) {
-  nm <- reactive({inpt[[namify(typ, num, "name")]]})
+  nm <- inpt[[namify(typ, num, "name")]]
   paste0("<b><span style=font-size: 2em;>", 
-         ifelse(nm() == "", "Adversary", nm()), 
+         ifelse(nm == "", "Adversary", nm), 
          "</spanp></b><span> (T", tr, " ", gsub("_", " ", typ), " \u0023", num, ")</span>",
          if (typ == "Horde"){paste0(" <span>(", inpt[[namify(typ, num, "perhp")]], "/HP)</span>")})
 }
 
 list_adv_desc <- function(inpt, typ, num) {
-  dsc <- reactive({inpt[[namify(typ, num, "desc")]]})
-  paste0(ifelse(dsc() == "","The most foul, cruel, and bad-tempered rodent you ever set eyes on", dsc()))
+  dsc <- inpt[[namify(typ, num, "desc")]]#})
+  paste0(ifelse(dsc == "","The most foul, cruel, and bad-tempered rodent you ever set eyes on", dsc))
 }
 
 ###
@@ -18,35 +18,27 @@ list_adv_desc <- function(inpt, typ, num) {
 ###
 
 list_motives_tactics <- function(inpt, typ, num) {
-  mt1 <- reactive({inpt[[namify(typ, num, "mottac1")]]})
-  mt2 <- reactive({inpt[[namify(typ, num, "mottac2")]]})
-  mt3 <- reactive({inpt[[namify(typ, num, "mottac3")]]})
+  mt1 <- inpt[[namify(typ, num, "mottac1")]]
+  mt2 <- inpt[[namify(typ, num, "mottac2")]]
+  mt3 <- inpt[[namify(typ, num, "mottac3")]]
   
-  if (any(mt1() != "", mt2() != "", mt3() != "")) {
+  if (any(mt1 != "", mt2 != "", mt3 != "")) {
     fluidRow(paste0("Motives and tactics: ", 
-                    paste(ifelse(mt1() != "", mt1(), "_drop_"), 
-                          ifelse(mt2() != "", mt2(), "_drop_"),
-                          ifelse(mt3() != "", mt3(), "_drop_"), sep = ", ") |> 
+                    paste(ifelse(mt1 != "", mt1, "_drop_"),
+                          ifelse(mt2 != "", mt2, "_drop_"),
+                          ifelse(mt3 != "", mt3, "_drop_"), sep = ", ") |> 
                       gsub(pattern = " ,|_drop_,|, _drop_|,$", replacement = "")))
   }
 }
 
 list_stats_1 <- function(inpt, typ, num) {
   
-  atk_txt <- reactive({ifelse(inpt[[namify(typ, num, "atk")]] > -1, 
-                              paste0("+", inpt[[namify(typ, num, "atk")]]),
-                              inpt[[namify(typ, num, "atk")]])})
+  atk_txt <- 
+    ifelse(inpt[[namify(typ, num, "atk")]] > -1,
+           paste0("+", inpt[[namify(typ, num, "atk")]]),
+           inpt[[namify(typ, num, "atk")]])
   
-  wpn_txt_lbl <- reactive({
-    paste0(ifelse(inpt[[namify(typ, num, "wpn")]] == "", "{weapon}", inpt[[namify(typ, num, "wpn")]]), ": ",
-           inpt[[namify(typ, num, "rng")]])})
-  
-  wpn_txt <- reactive({
-    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg()
-    } else {dice_dmg()}, inpt[[namify(typ, num, "dmg_typ")]])
-  })
-  
-  dice_dmg <- reactive({
+  dice_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
       paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
@@ -55,23 +47,29 @@ list_stats_1 <- function(inpt, typ, num) {
       dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
       paste0(dmg_str, (dmg_end + 2))
     } else {inpt[[namify(typ, num, "dmg_dice")]]}
-  })
   
-  avg_dmg <- reactive({
+  avg_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
       paste(inpt[[namify(typ, num, "dmg_avg")]], "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)") {
       inpt[[namify(typ, num, "dmg_avg")]] + 2
     } else {inpt[[namify(typ, num, "dmg_avg")]]}
-  })
+  
+  wpn_txt_lbl <- 
+    paste0(ifelse(inpt[[namify(typ, num, "wpn")]] == "", "{weapon}", inpt[[namify(typ, num, "wpn")]]), ": ",
+           inpt[[namify(typ, num, "rng")]])
+  
+  wpn_txt <- 
+    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+    } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]])
   
   df_ <- reactive({
     tibble(
       Diff = inpt[[namify(typ, num, "diff")]],
       Thresholds = paste(inpt[[namify(typ, num, "thresh_maj")]], "/", 
                          inpt[[namify(typ, num, "thresh_sev")]]),
-      ATK = atk_txt(),
-      !!sym(wpn_txt_lbl()) := wpn_txt()
+      ATK = atk_txt,
+      !!sym(wpn_txt_lbl) := wpn_txt
     )
   })
   
@@ -109,7 +107,8 @@ msg_status <- function(inpt, typ, num) {
   renderUI(HTML(msg()))
 }
 
-# function bold /italicize key phrases in adversary featues --------------------
+
+# function to bold /italicize key phrases in adversary featues -----------------
 process_feat_txt <- function(txt) {
   txt_ <- txt
   
@@ -285,9 +284,6 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
       dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
       avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
     }
-    ###
-    ### CURRENTLY NOT ABLE TO DIRECTLY PROCESS/WORK WITH THE REPLACEMENT PATTERNS AS DESIRED
-    ###
     for (z in 1:length(ptrns)) {
       txt_ <- 
         sub(pattern = ptrns[z], 
@@ -559,7 +555,7 @@ build_colossus_fw_run_ui <- function(inpt, col_elemname, tr) {
     fluidRow(div(class="inline",
                  ### ADD 'Defeated' TO THE CONDITION SET???
                  checkboxGroupInput(namify(a.t(col_elemname), a.n(col_elemname), "conds"), 
-                                    label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable"), 
+                                    label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable", "Defeated"), 
                                     inline = TRUE))),
     fluidRow(textify(a.t(col_elemname), a.n(col_elemname), "custom_cond", placehold = "Type custom conditions here"))
   )
