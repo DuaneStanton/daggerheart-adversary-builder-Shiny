@@ -11,6 +11,7 @@ library(shiny)
 library(dplyr)
 library(stringi)
 library(DT)
+library(jsonlite)
 
 source("R/Supporting Functions and Code.R")
 source("R/Customize section code.R")
@@ -49,7 +50,7 @@ ui <- fluidPage(
       color: #320e45;
     }
     .adv-run-colossus-sg {
-      border: 4px solid #320e45;
+      border: 2px solid #320e45;
       background: #c2bee8;
       color: #320e45;
     }
@@ -119,18 +120,23 @@ ui <- fluidPage(
                htmlOutput("dmg_note"),
                div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
                    selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
-               uiOutput("adv_spec"),
-               textOutput("colchk") ###
+               uiOutput("adv_spec")
                ), 
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
-               div(uiOutput("adv_run"))
+               div(uiOutput("adv_run")),
+               textOutput("RUNCHECK")###
                ), 
       ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
-      tabPanel("Obsidian",
-               div(h4("Copy from this tab to Obsidian if running adversaries there - details from the 'Customize' tab")),
-               "WORK IN PROGRESS"
+      tabPanel("Obsidian - Daggerforge",
+               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
+               "WORK IN PROGRESS",
+               verbatimTextOutput("dfCHK")
                ), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+      tabPanel("Obsidian - ITS Theme",
+               div(h4("Copy from this tab to paste into Obsidian if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
+               "WORK IN PROGRESS"
+               ),
       tabPanel("Credits",
                htmlOutput("sources")
                ), 
@@ -427,7 +433,6 @@ server <- function(input, output) {
   })
   
   observeEvent(col_fw_names(), {
-    #req(active_adv_ct_vec())
     col_frame_ct <- adv_ct_vec()["Colossus_framework"]
     
     if (col_frame_ct > 1 & any(col_fw_names() != "")) {
@@ -454,7 +459,7 @@ server <- function(input, output) {
   })
   
   # organize Colossus elements by framework membership -------------------------
-  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec())}) ### MAKE REACTIVE???
+  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec())})
   
   # server Run panel -----------------------------------------------------------
   adv_runset <- reactive({
@@ -472,8 +477,6 @@ server <- function(input, output) {
       }
     )
   })
-  
-  output$colchk <- renderText(paste(adv_runset(), collapse = ", ")) ###
   
   output$adv_run <- 
     renderUI({
@@ -499,7 +502,47 @@ server <- function(input, output) {
       })
     })
   
-  # server Obsidian panel ------------------------------------------------------
+  # monitor Stress status and set 'Vulnerable' condition as appropriate --------
+  adv_w_stress <- reactive({ adv_runset()[!grepl("Colossus_.+_segment", adv_runset())] })
+  
+  ###
+  ### MAY NEED TO REVISE THIS IF KEEPING - INIT TRIGGERS VAPPLY ERROR
+  ###
+  # have_stress_0 <- reactive({
+  #     req(list(length(adv_w_stress()) > 0L,
+  #              input[[namify(a.t(adv_w_stress()[1]), a.n(adv_w_stress()[1]), "stress_run")]] >= 0))
+  #     vapply(1:length(adv_w_stress()), \(i) {
+  #       input[[namify(a.t(adv_w_stress()[i]), a.n(adv_w_stress()[i]), "stress_run")]] == 0
+  #       }, logical(1L))
+  #   })
+
+  #stress_0_adv <- reactive({ adv_w_stress()[have_stress_0()] })
+
+  ###
+  ### ALL STEPS DOWN TO HERE WORK...
+  ###
+  # observeEvent(stress_0_adv(), {
+  #   if (length(stress_0_adv()) > 0L) {
+  #     for (i in 1:length(stress_0_adv())) {
+  #       updateCheckboxGroupInput(
+  #         inputId = paste0(stress_0_adv()[i], "_conds"),
+  #         selected = unique(c(input[[namify(a.t(adv_w_stress()[i]), a.n(adv_w_stress()[i]), "stress_run")]],
+  #                             "Vulnerable"))
+  #       )
+  #     }
+  #   }
+  # })
+  
+  #output$RUNCHECK <- renderText(paste(stress_0_adv(), collapse = " / "))
+  
+  # server Obsidian - Daggerforge panel ----------------------------------------
+  
+  ###
+  ### SAME GENERAL IDEA AS 'Run' SERVER, JUST LIST OF LISTS AND LESS FORMATTING
+  ### ...THEN PROVIDE DOWNLOAD ON CLICK (GREY OUT IF NO DETAILS IN CUstomize, OR PROMPT WITH MESSAGE)
+  ###
+  
+  # server Obsidian - ITS Theme panel ------------------------------------------
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 

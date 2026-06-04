@@ -372,6 +372,12 @@ build_adv_run_ui <- function(inpt, adv_elemname, tr) {
                              selected = inpt[[namify(a.t(adv_elemname), a.n(adv_elemname), "stress")]], 
                              width = "70px"))
       ) ),
+    if (inpt[[namify(a.t(adv_elemname), a.n(adv_elemname), "exp")]] != "") {
+      fluidRow(column(width = 12, 
+                      renderUI({HTML(
+                        paste0("<b>Experience(s):</b> ", inpt[[namify(a.t(adv_elemname), a.n(adv_elemname), "exp")]]))}))
+               )
+    },
     fluidRow(column(width = 12, list_features(inpt, a.t(adv_elemname), a.n(adv_elemname)))),
     fluidRow(column(width = 12, msg_status(inpt, a.t(adv_elemname), a.n(adv_elemname)))),
     fluidRow(div(class="inline",
