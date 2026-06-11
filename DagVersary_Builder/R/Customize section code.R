@@ -77,7 +77,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
                  numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                  div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
       )),
-    textify(typ, num, "exp", "Experience(s)", "350px"),
+    textify(typ, num, "exp", "Experience(s) e.g. Conjurer of cheap tricks +2", "350px"),
     ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
     ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
     featurize(typ, num, 1),
