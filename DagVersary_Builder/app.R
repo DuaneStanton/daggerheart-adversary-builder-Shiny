@@ -90,6 +90,11 @@ ui <- fluidPage(
     .inline .selectize-input.full.has-items.has-options {
       width: 60px;
     }
+    #json_dl {
+      background-color: #53386b;
+      color: #e0c34c;
+      border-color: #320e45;
+    }
     ")),
     htmlOutput("use_note"),
     tabsetPanel(
@@ -109,6 +114,7 @@ ui <- fluidPage(
                selectInput("tier", "Select adversary tier", choices = tier_vals, 
                            selected = 1, multiple = FALSE, width = "150px"),
                htmlOutput("adv_tally"),
+               div(h5("Note: if you're running these via Obsidian - Daggerforge and want multiples of a specific adversary, just create them once here and specify the count in the Daggerforge plugin '- [#] +' interface.")),
                uiOutput("adv_counts", 
                         label = "Specify the # of adversaries by type"),
                htmlOutput("warning_battle_points"),
@@ -125,14 +131,16 @@ ui <- fluidPage(
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
                div(uiOutput("adv_run")),
-               textOutput("RUNCHECK")###
+               textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
                ), 
       ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian - Daggerforge",
                div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
-               "WORK IN PROGRESS",
-               verbatimTextOutput("dfCHK")
-               ), ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+               downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
+               div(h4("The downloaded .json will look like the below:")),
+               verbatimTextOutput(outputId = "json_dl_prvw")
+               ), 
+      ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
       tabPanel("Obsidian - ITS Theme",
                div(h4("Copy from this tab to paste into Obsidian if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
                "WORK IN PROGRESS"
@@ -153,14 +161,10 @@ server <- function(input, output) {
   output$use_note <- renderText({
     "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credit</b> tab)</p>"
   })
-  ###
-  ### TODO
-  ###
-  ### - work out containerized adversary buildout tab (build via click button on 'setup' tab)
-  ### -- needs to allow user to track HP, Stress, and Conditions (likely include extendable 'add condition' text input field along w/ multi-select dropdowns for standard)
-  ### - workout Obsidian-friendly copy-able formatted tab (LIKELY FUNCTION)
+
+  ### TODO:
+  ### - work out Obsidian-friendly copy-able formatted tab (LIKELY FUNCTION)
   ### - add validation checks
-  ### - incorporate 'add +1d4 to dmg roll' and 'add static +2 to dmg roll' in rendered damage dice for each 'result' tab
   ### - work on aesthetics (hope & fear, baby!)
   
   # server Start panel ---------------------------------------------------------
@@ -536,11 +540,25 @@ server <- function(input, output) {
   #output$RUNCHECK <- renderText(paste(stress_0_adv(), collapse = " / "))
   
   # server Obsidian - Daggerforge panel ----------------------------------------
+  json_file <- reactive({
+    req(adv_runset())
+    
+    lapply(1:length(adv_runset()), \(i) {
+      json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier)
+    }) |> 
+      jsonify()
+  })
   
-  ###
-  ### SAME GENERAL IDEA AS 'Run' SERVER, JUST LIST OF LISTS AND LESS FORMATTING
-  ### ...THEN PROVIDE DOWNLOAD ON CLICK (GREY OUT IF NO DETAILS IN CUstomize, OR PROMPT WITH MESSAGE)
-  ###
+  output$json_dl <- downloadHandler(
+    filename = function() {
+      paste0("daggerforge_dagversary-", format(Sys.time(), "%d-%b-%Y %Hh %Mm %Z"), ".json")
+    },
+    content = function(file) {
+      cat(json_file(), file = file)
+    }
+  )
+  
+  output$json_dl_prvw <- renderText(json_file())
   
   # server Obsidian - ITS Theme panel ------------------------------------------
   
