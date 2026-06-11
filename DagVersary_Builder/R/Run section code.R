@@ -279,11 +279,12 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     if (typ == "Minion") {
       p_rep <- "min"
       min_pasv <- paste0("<b>", inpt[[namify(typ, num, "minion_pasv")]], "</b>")
-    } else {
-      tier_ <- inpt[["tier"]]
-      dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
-      avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
-    }
+    } 
+    
+    tier_ <- inpt[["tier"]]
+    dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
+    avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
+
     for (z in 1:length(ptrns)) {
       txt_ <- 
         sub(pattern = ptrns[z], 
@@ -317,7 +318,6 @@ list_features <- function(inpt, typ, num) {
           what = rbind,
           args = lapply(1:length(feattypes_set()), \(z){
             data.frame(idx = z, typval = feattypes_set()[z],
-                       # MOSTLY WORKING! LAST THING NEEDED - NEED TO RETAIN THE '<adversary>' text...
                        txt = process_feature(inpt, typ, num, z)  |> 
                              process_feat_txt_dtl(inpt = inpt, typ = typ, num = num)) })
         )
@@ -328,7 +328,7 @@ list_features <- function(inpt, typ, num) {
   })
   if (!is.null(feat_list())) {
     renderUI(HTML(feat_list()))
-  }
+  } else {renderUI(HTML("No Features listed - add in 'Customize' tab if desired"))}
 }
 
 # function for final adversary 'Run' tab UI ------------------------------------
