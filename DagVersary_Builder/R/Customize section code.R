@@ -98,7 +98,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
 build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
   div(
     h3(renderText({paste0("Tier ", tr, " ", gsub("_", " ", typ), " (#", num, ")")})),
-    div(title = "Framework: name of colossus; Segment: name of colossus part (e.g. 'Mountainbreaker Left Arm')",
+    div(title = "Framework: colossus name (e.g. 'Mountainbreaker'); Segment: part name (e.g. 'Mountainbreaker Left Arm')",
         textify(typ, num, "name", paste0(sub("segment", "sgmt", typ), "_", num, " (name)"), "250px")),
     if (grepl("framework", typ)) {
       textify(typ, num, "desc", "A brief description of the adversary", "400px") },
