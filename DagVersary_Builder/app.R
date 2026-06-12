@@ -11,11 +11,11 @@ library(shiny)
 library(dplyr)
 library(stringi)
 library(DT)
-library(jsonlite)
 
 source("R/Supporting Functions and Code.R")
 source("R/Customize section code.R")
 source("R/Run section code.R")
+source("R/Obsidian_Daggerforge code.R")
 
 # Define UI ====================================================================
 ui <- fluidPage(
@@ -136,6 +136,7 @@ ui <- fluidPage(
       ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian - Daggerforge",
                div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
+               htmlOutput("dgrfg_colossus_note"),
                downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
                div(h4("The downloaded .json will look like the below:")),
                verbatimTextOutput(outputId = "json_dl_prvw")
@@ -544,6 +545,9 @@ server <- function(input, output) {
     req(adv_runset())
     
     lapply(1:length(adv_runset()), \(i) {
+      ###
+      ### NEED TO ROUTE FOR COLOSSUS OR NOT
+      ###
       json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier)
     }) |> 
       jsonify()
@@ -559,6 +563,13 @@ server <- function(input, output) {
   )
   
   output$json_dl_prvw <- renderText(json_file())
+  
+  output$dgrfg_colossus_note <- 
+    renderText({
+      if (any(grepl("Colossus", names(active_adv_ct_vec())))) {
+        "<p style = 'color:blue'><b>Note: as of this app's build date, Daggerforge doesn't currently have a standalone 'Colossus' category for filtering by adversary type; instead, Colossi and their segments are classified as 'Solo' and '(col)' is added to the adversary names.</b></p>"
+      }
+    })
   
   # server Obsidian - ITS Theme panel ------------------------------------------
   
