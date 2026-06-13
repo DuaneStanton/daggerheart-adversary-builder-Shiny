@@ -5,7 +5,7 @@ library(dplyr) # needed here for data.frame processing
 # values used in multiple places in the app ------------------------------------
 adv_types <- 
   c("Bruiser", "Horde", "Leader", "Minion", "Ranged", "Skulk", "Solo", "Standard", "Support", "Social",
-    "Colossus_framework", "Colossus_average_segment", "Colossus_strong_segment")
+    "Colossus_framework", "Colossus_strong_segment", "Colossus_average_segment")
 tier_vals <- 1:4
 distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
 
@@ -80,13 +80,6 @@ for (i in 1:nrow(feat_ref_df)) {
   feat_ref_df$feat_text[i] <- 
     gsub(paste0("<", feat_ref_df$adv_type[i], ">"), paste0("&lt;", feat_ref_df$adv_type[i], "&gt;"), feat_ref_df$feat_text[i])
 }
-
-### TODO
-### ABOVE:
-### 1) count # times 'feat_det' appears
-### 2) replace the '{feat_det:}' text with necessary code for ability to evaluate the contents
-###    (e.g. 'nm' of needed input[[namify(...)]] eval, PLUS any related operations e.g. half-damage)
-###
 
 feat_ref_df <- 
   lapply(1:nrow(feat_ref_df), \(i) {

@@ -77,7 +77,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
                  numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                  div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
       )),
-    textify(typ, num, "exp", "Experience(s) e.g. Conjurer of cheap tricks +2", "350px"),
+    textify(typ, num, "exp", "Experience(s) e.g. 'Conjurer of cheap tricks +2'", "350px"),
     ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
     ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
     featurize(typ, num, 1),
@@ -90,9 +90,19 @@ build_adv_spec_ui <- function(typ, num, tr) {
 
 # UI distinct to Colossal adversaries ------------------------------------------
 
-###
-### TODO: TIE SEGMENTS TO TORSO NAME - ALLOW SELECTINPUT WHERE NAME FROM FRAMEWORK IS, INCLUDE PLACEHOLDER IF EMPTY
-###
+# function to build motives/tactics (Colossus framework) / adjacent segment(s) (Colossus segment) input
+build_col_mt_as <- function(typ, num, inpt_num, lbl = NULL) {
+  div(
+    if (grepl("framework", typ)) {
+      textify(typ, num, paste0("mottac_adj", inpt_num), paste("Motive/tactic", inpt_num), "200px")
+    } else {
+      selectInput(namify(typ, num, paste0("mottac_adj", inpt_num)),
+                  label = lbl,
+                  choices = "None", # will update as user enters segment names
+                  width = "200px")
+    }
+  )
+}
 
 # note: multi_frame is an under-consideration element to allow designing/running multiple colossi in a single instance - may be removed
 build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
@@ -105,22 +115,15 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
     if (grepl("segment", typ) && multi_frame) {
       selectInput(namify(typ, num, "parent_frame"), label = "Associated framework", choices = "give Colossus frameworks names", selected = "give Colossus frameworks names", width = "300px")
     },
-    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Arm' if this segment is 'Body')"},
-      textify(typ, num, "mottac_adj1", 
-      ifelse(grepl("framework", typ), "Motive/tactic 1", "Adjacent segment type 1"), "200px")
+    fluidRow(
+      div(title = 
+          ifelse(grepl("framework", typ), "Motives/Tactics", "Adjacent segments"))
       ),
-    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Leg' if this segment is 'Body')"},
-        textify(typ, num, "mottac_adj2", 
-                ifelse(grepl("framework", typ), "Motive/tactic 2", "Adjacent segment type 2"), "200px")
-    ),
-    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Tail' if this segment is 'Body')"},
-        textify(typ, num, "mottac_adj3", 
-                ifelse(grepl("framework", typ), "Motive/tactic 3", "Adjacent segment type 3"), "200px")
-    ),
-    div(title = if (!grepl("framework", typ)) {"Reference other segment name (e.g. 'Body' if this segment is 'Arm')"},
-        textify(typ, num, "mottac_adj4", 
-                ifelse(grepl("framework", typ), "Motive/tactic 4", "Adjacent segment type 4"), "200px")
-    ),
+    div(title = if (!grepl("framework", typ)) {"Repeats of the same segment names here will be simplified to unique values in the next set of tabs"},
+        build_col_mt_as(typ, num, 1, ifelse(grepl("framework", typ), "Motives/Tactics", "Adjacent segment(s)"))),
+    build_col_mt_as(typ, num, 2),
+    build_col_mt_as(typ, num, 3),
+    build_col_mt_as(typ, num, 4),
     if (grepl("framework", typ)) { # framework
       fluidRow(
         column(width = 12, offset = 0,
@@ -138,7 +141,7 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
                    div(title = "HP per each segment of this type", numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")) )
         ))
     },
-    if (grepl("framework", typ)) {textify(typ, num, "exp", "Experience(s)", "350px")
+    if (grepl("framework", typ)) {textify(typ, num, "exp", "Experience(s) e.g. 'Burninator +2'", "350px")
     } else {
       fluidRow(
         column(width = 12, offset = 0,

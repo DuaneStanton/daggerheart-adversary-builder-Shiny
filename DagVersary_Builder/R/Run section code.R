@@ -87,6 +87,11 @@ msg_hp_stress <- function(inpt, typ, num) {
 }
 
 msg_status <- function(inpt, typ, num) {
+  msg_d <- reactive({
+    if ("Defeated" %in% inpt[[namify(typ, num, "conds")]]) { # currently only for Colossi
+      "<p style ='color: #9300CF; font-size: 25px; text-align: center;'><b>DEFEATED!</b></p>"
+    }
+  })
   msg_h <- reactive({
     if ("Hidden" %in% inpt[[namify(typ, num, "conds")]]) {
       "<p style = 'color: #544659; text-align: center; font-size: 18px;'><b><i>Hidden:</i></b> rolls against have disadvantage"
@@ -102,7 +107,7 @@ msg_status <- function(inpt, typ, num) {
       "<p style = 'color: darkred; text-align: center; font-size: 18px;'><b><i>Vulnerable:</i></b> rolls against have advantage"
     }
   })
-  msg <- reactive({ paste(msg_h(), msg_r(), msg_v(), collapse = "<br>") })
+  msg <- reactive({ paste(msg_d(), msg_h(), msg_r(), msg_v(), collapse = "<br>") })
   
   renderUI(HTML(msg()))
 }
@@ -390,35 +395,43 @@ build_adv_run_ui <- function(inpt, adv_elemname, tr) {
 }
 
 # function to organize and output Colossus framework/segment -------------------
-###
-### NEED: List Colossus framework and then segments
-### NEED: If multiple frameworks, organize framework/segment sets by colossus
-###
 # function to organize framework/segments when multiple frameworks -------------
-id_colossus_components <- function(inpt, adv_ct_vec) {
+# id 'grp' to ID colossus grouping (e.g. Colossus 1 framework, then Colossus 1 segments, then Colossus 2 framework...)
+# id 'fwk' to ID colossus framework - redundant for the framework itself; intended for carrying framework damage thresholds into associated segment stat blocks  
+# id 'seg' to ID names of other segments with the same parent framework
+id_colossus_components <- function(inpt, adv_ct_vec, id = "grp") {
   # framework and segment counts
   fw_ct <- adv_ct_vec["Colossus_framework"]
-  sg_avg_ct <- adv_ct_vec["Colossus_average_segment"]
   sg_str_ct <- adv_ct_vec["Colossus_strong_segment"]
+  sg_avg_ct <- adv_ct_vec["Colossus_average_segment"]
   
   # group colossus components appropriately
   if (fw_ct == 1) {
-    paste0("Colossus_", 
-           c("framework_1",
-             if (sg_avg_ct > 0) {paste0("average_segment_", 1:sg_avg_ct)},
-             if (sg_str_ct > 0) {paste0("strong_segment_", 1:sg_str_ct)}))
-  } else if (fw_ct > 1) {
+    if (id == "grp") {
+      paste0("Colossus_", 
+             c("framework_1",
+               if (sg_str_ct > 0) {paste0("strong_segment_", 1:sg_str_ct)},
+               if (sg_avg_ct > 0) {paste0("average_segment_", 1:sg_avg_ct)})
+             )
+    } else if (id == "fwk") {
+      rep("Colossus_framework_1", 1 + sg_str_ct + sg_avg_ct)
+    } else if (id == "seg") { # 'name' paste prevents issues with initially-empty segment names - this is processed out in app.R
+      c(if (sg_str_ct > 0) {vapply(1:sg_str_ct, \(z) {paste0("name", inpt[[namify("Colossus_strong_segment", z, "name")]])}, character(1L))},
+        if (sg_avg_ct > 0) {vapply(1:sg_avg_ct, \(z) {paste0("name", inpt[[namify("Colossus_average_segment", z, "name")]])}, character(1L))}) 
+    }
+  } else if (fw_ct > 1) { # grouping by 'containing' framework
+
     fw_names <- vapply(1:fw_ct, \(z) { 
       inpt[[paste0("Colossus_framework_", z, "_name")]]
     }, character(1L))
-    sg_avg_fw <- if (sg_avg_ct > 0) {
-      vapply(1:sg_avg_ct, \(z) {
-        inpt[[paste0("Colossus_average_segment_", z, "_parent_frame")]]
-      }, character(1L))
-    }
     sg_str_fw <- if (sg_str_ct > 0) {
       vapply(1:sg_str_ct, \(z) {
         inpt[[paste0("Colossus_strong_segment_", z, "_parent_frame")]]
+      }, character(1L))
+    }
+    sg_avg_fw <- if (sg_avg_ct > 0) {
+      vapply(1:sg_avg_ct, \(z) {
+        inpt[[paste0("Colossus_average_segment_", z, "_parent_frame")]]
       }, character(1L))
     }
     
@@ -426,31 +439,59 @@ id_colossus_components <- function(inpt, adv_ct_vec) {
       lapply(1:length(fw_names), \(z) {
         vec <- 
         c(paste0("Colossus_framework_", z),
-          if (!is.null(sg_avg_fw)) {
-            paste0("Colossus_average_segment_", which(sg_avg_fw == fw_names[z]))
-          },
           if (!is.null(sg_str_fw)) {
             paste0("Colossus_strong_segment_", which(sg_str_fw == fw_names[z]))
+          },
+          if (!is.null(sg_avg_fw)) {
+            paste0("Colossus_average_segment_", which(sg_avg_fw == fw_names[z]))
           })
+    
         vec[!(vec %in% c("Colossus_average_segment_", "Colossus_strong_segment_"))]
       })
     
-    unlist(cls_grps, recursive = FALSE)
+    fwk_grps <- 
+      lapply(1:length(fw_names), \(z) {
+        vec <- 
+          c(paste0("Colossus_framework_", z),
+            if (!is.null(sg_str_fw)) {
+              rep(paste0("Colossus_framework_", z), sum(sg_str_fw == fw_names[z]))
+            },
+            if (!is.null(sg_avg_fw)) {
+              rep(paste0("Colossus_framework_", z), sum(sg_avg_fw == fw_names[z]))
+            })
+        
+        vec[!grepl("segment", vec)]
+      })
+    
+    seg_nms <- 
+      lapply(1:length(fw_names), \(z) {
+        seg_ids <- cls_grps[[z]][grepl("segment", cls_grps[[z]])]
+        vapply(1:length(seg_ids), \(a) {paste0("name", inpt[[namify(a.t(seg_ids[a]), a.n(seg_ids[a]), "name")]])}, character(1L))
+      })
+    # name the list entries (vectors of segment names) with the frameworks - can then select segment name sets using 'id == fwk'-generated run of this function
+    names(seg_nms) <- fw_names
+    
+    if (id == "grp") {unlist(cls_grps, recursive = FALSE)
+    } else if (id == "fwk") {unlist(fwk_grps, recursive = FALSE)
+    } else if (id == "seg") {seg_nms}
+    
     }
   }
 
 
 list_motives_tactics_adjacent_sgmt <- function(inpt, typ, num) {
-  mt1 <- reactive({inpt[[namify(typ, num, "mottac_adj1")]]})
-  mt2 <- reactive({inpt[[namify(typ, num, "mottac_adj2")]]})
-  mt3 <- reactive({inpt[[namify(typ, num, "mottac_adj3")]]})
+  mt1 <- inpt[[namify(typ, num, "mottac_adj1")]]
+  mt2 <- inpt[[namify(typ, num, "mottac_adj2")]]
+  mt3 <- inpt[[namify(typ, num, "mottac_adj3")]]
+  mt4 <- inpt[[namify(typ, num, "mottac_adj4")]]
   
-  if (any(mt1() != "", mt2() != "", mt3() != "")) {
-    fluidRow(paste0(ifelse(grepl("framework", typ), "Motives and tactics: ", "Adjacent segment types: "),
-                    paste(ifelse(mt1() != "", mt1(), "_drop_"), 
-                          ifelse(mt2() != "", mt2(), "_drop_"),
-                          ifelse(mt3() != "", mt3(), "_drop_"), sep = ", ") |> 
-                      gsub(pattern = " ,|_drop_,|, _drop_|,$", replacement = "")))
+  mt_set <- c(mt1, mt2, mt3, mt4) |> unique()
+  if (length(mt_set) > 1L) {mt_set <- mt_set[mt_set != "None"]}
+  
+  if (!is.null(mt_set)) {
+    fluidRow(paste0(ifelse(grepl("framework", typ), "Motives and tactics: ", "Adjacent segment(s): "),
+                    sub(", $", "", paste(mt_set, collapse = ", "))
+    ))
   }
 }
 

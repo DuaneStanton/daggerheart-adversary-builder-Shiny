@@ -135,7 +135,7 @@ ui <- fluidPage(
                ), 
       ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian - Daggerforge",
-               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
+               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You'll need to close and reopen Obsidian after uploading to access newly-added adversaries.")),
                htmlOutput("dgrfg_colossus_note"),
                downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
                div(h4("The downloaded .json will look like the below:")),
@@ -252,9 +252,9 @@ server <- function(input, output) {
     if (sum(adv_ct_vec()) > 0 && any(grepl("Colossus", names(active_adv_ct_vec()))) & adv_ct_vec()["Colossus_framework"] == 0) {
       "<p style = 'color: darkred; font-size: 18px;'><b><i>Any encounter with a Colossus should include a Colossus framework and multiple segments.</i></b>"
     } else if (sum(adv_ct_vec()) > 0 && adv_ct_vec()["Colossus_framework"] > 1 && adv_ct_vec()["Colossus_average_segment"] + adv_ct_vec()["Colossus_strong_segment"] >= adv_ct_vec()["Colossus_framework"]) {
-      "<p style = 'color: darkred; font-size: 18px;'><b><i>If using multiple Colossus frameworks, make to specify which framework each segment type is tied to.</i></b>"
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>If using multiple Colossus frameworks, make sure to specify which framework each segment type is tied to.</i></b>"
     } else if (sum(adv_ct_vec()) > 0 && (adv_ct_vec()["Colossus_average_segment"] + adv_ct_vec()["Colossus_strong_segment"] < adv_ct_vec()["Colossus_framework"])) {
-      "<p style = 'color: darkred; font-size: 18px;'><b><i>Each Colossus framework should have at least one segment (probably more per framework).</i></b>"
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>Each Colossus framework should have at least one segment (probably more) per framework.</i></b>"
     }
   })
   
@@ -438,9 +438,19 @@ server <- function(input, output) {
   })
   
   observeEvent(col_fw_names(), {
-    col_frame_ct <- adv_ct_vec()["Colossus_framework"]
+    col_fwk_ct <- adv_ct_vec()["Colossus_framework"]
     
-    if (col_frame_ct > 1 & any(col_fw_names() != "")) {
+    if (col_fwk_ct > 1 & any(col_fw_names() != "")) {
+      str_col_segmt_ct <- adv_ct_vec()["Colossus_strong_segment"]
+      if (str_col_segmt_ct > 0) {
+        for (i in 1:str_col_segmt_ct) {
+          updateSelectInput(
+            inputId = namify("Colossus_strong_segment", i, "parent_frame"),
+            choices = col_fw_names(),
+            selected = NULL)
+        }
+      }
+      
       avg_col_segmt_ct <- adv_ct_vec()["Colossus_average_segment"]
       if (avg_col_segmt_ct > 0) {
         for (i in 1:avg_col_segmt_ct) { 
@@ -451,28 +461,66 @@ server <- function(input, output) {
           }
       }
       
-      str_col_segmt_ct <- adv_ct_vec()["Colossus_strong_segment"]
-      if (str_col_segmt_ct > 0) {
-        for (i in 1:str_col_segmt_ct) {
-          updateSelectInput(
-            inputId = namify("Colossus_strong_segment", i, "parent_frame"),
-            choices = col_fw_names(),
-            selected = NULL)
+    }
+  })
+  
+  # organize Colossus elements by framework membership -------------------------
+  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec(), id = "grp")})
+  colossus_fwk <- reactive({id_colossus_components(input, adv_ct_vec(), id = "fwk")})
+  
+  # update colossus 'adjacent segments' names as the names are populated
+  col_seg_names_by_fwk <- reactive({
+    req(isTruthy(input[["Colossus_strong_segment_1_name"]]) || isTruthy(input[["Colossus_average_segment_1_name"]]))
+    id_colossus_components(input, adv_ct_vec(), id = "seg")
+  })
+  
+  observeEvent(col_seg_names_by_fwk(), {
+    col_fwk_ct <- adv_ct_vec()["Colossus_framework"]
+    col_str_seg_ct <- adv_ct_vec()["Colossus_strong_segment"]
+    col_avg_seg_ct <- adv_ct_vec()["Colossus_average_segment"]
+    
+    ###
+    ### TODO: LOOK INTO MERGING STRONG/AVERAGE SEGMENT CODE LOGIC...USING col_seg_names_by_fwk() ???
+    ###
+    
+    # note: choices begin with 'name' pasted at front to prevent 'initialization is empty' issue - sub() below removes this
+    if (col_str_seg_ct > 0) {
+      for (i in 1:col_str_seg_ct) {
+        for (j in 1:4) {# 1:{# calls to build_col_mt_as() in build_colossus_spec_ui() in Customize section code.R}
+          name_optns <- if (col_fwk_ct == 1) {col_seg_names_by_fwk()} else {col_seg_names_by_fwk()[[input[[namify("Colossus_strong_segment", i, "parent_frame")]]]]}
+          name_optns <- sub("^name", "", name_optns)
+          
+          updateSelectInput(inputId = namify("Colossus_strong_segment", i, paste0("mottac_adj", j)),
+                            choices = 
+                              c("None", unique(name_optns)[unique(name_optns) != input[[namify("Colossus_strong_segment", i, "name")]]])
+          )
+        }
+      }
+    }
+    
+    if (col_avg_seg_ct > 0) {
+      for (i in 1:col_avg_seg_ct) {
+        for (j in 1:4) {# 1:{# calls to build_col_mt_as() in build_colossus_spec_ui() in Customize section code.R}
+          name_optns <- if (col_fwk_ct == 1) {col_seg_names_by_fwk()} else {col_seg_names_by_fwk()[[input[[namify("Colossus_average_segment", i, "parent_frame")]]]]}
+          name_optns <- sub("^name", "", name_optns)
+          
+          updateSelectInput(inputId = namify("Colossus_average_segment", i, paste0("mottac_adj", j)),
+                            choices = 
+                                c("None", unique(name_optns)[unique(name_optns) != input[[namify("Colossus_average_segment", i, "name")]]])
+          )
         }
       }
     }
   })
   
-  # organize Colossus elements by framework membership -------------------------
-  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec())})
-  
   # server Run panel -----------------------------------------------------------
+  # id text for outputting adversaries in order
   adv_runset <- reactive({
     req(active_adv_ct_vec())
     non_colossi <- active_adv_ct_vec()[!grepl("Colossus", names(active_adv_ct_vec()))]
     
     c(
-    # Colossi first
+    # Colossi first - plausibly focus of any scene they're in
       if (length(colossus_groupset()) > 0L) {colossus_groupset()},
     # then non-Colossi
       if (length(non_colossi) > 0L) {
@@ -545,10 +593,12 @@ server <- function(input, output) {
     req(adv_runset())
     
     lapply(1:length(adv_runset()), \(i) {
-      ###
-      ### NEED TO ROUTE FOR COLOSSUS OR NOT
-      ###
-      json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier)
+      if (grepl("Colossus", adv_runset()[i])) {
+        json_prep_adversary_col(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier,
+                                fwk_id = colossus_fwk()[i])
+      } else {
+        json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier)
+      }
     }) |> 
       jsonify()
   })
@@ -562,12 +612,12 @@ server <- function(input, output) {
     }
   )
   
-  output$json_dl_prvw <- renderText(json_file())
+  output$json_dl_prvw <- renderText({json_file()})#renderPrint({cat(json_file())})
   
   output$dgrfg_colossus_note <- 
     renderText({
       if (any(grepl("Colossus", names(active_adv_ct_vec())))) {
-        "<p style = 'color:blue'><b>Note: as of this app's build date, Daggerforge doesn't currently have a standalone 'Colossus' category for filtering by adversary type; instead, Colossi and their segments are classified as 'Solo' and '(col)' is added to the adversary names.</b></p>"
+        "<p style = 'color:blue'><b>Note: as of this app's build, Daggerforge doesn't currently have standalone 'Colossus framework/segment' category for filtering by adversary type; Colossi will be under Source = 'Custom' and '(col fw)' (framework) '(col sg)' (segment) is added to the adversary names.</b></p>"
       }
     })
   
