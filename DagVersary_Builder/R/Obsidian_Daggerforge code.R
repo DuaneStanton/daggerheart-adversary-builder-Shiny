@@ -37,15 +37,17 @@ list_features_obsdn <- function(inpt, typ, num, json = TRUE) {
       x1 <- strsplit(feat_list0(), split = "<br>---<br>")[[1]]
       x2 <- 
         lapply(1:length(x1), \(i) {
-          ###x1[i] <- gsub("<b>|<i>|</b>|</i>", "", x1[i])
+          # need to trim the <b><i> and </i></b> wrapper around the {Feature Name} - {Feature Type} text
+          x1 <- sub("<b><i>", "", x1)
+          x1 <- sub("</i></b>", "", x1)
           nm_ <- sub("^(.+)\\s*-.+$", "\\1", x1[i]) |> gsub(pattern = "^\\s*|\\s*$", replacement = "")
           typ_ <- sub("^.+\\s*-\\s*(.+):.+$", "\\1", x1[i])
           cst_ <- if (grepl("Mark a|[0-9]+ .tress | Spend a|[0-9]+ .ear", x1[i])) {
-            sub("^.+:\\s*(.ark a .tress|.ark [0-9]+ .tress|Spend a .ear|Spend [0-9] .ear).+$", "\\1", x1[i])
+            sub("^.+:\\s*<b>(.ark a .tress|.ark [0-9]+ .tress|Spend a .ear|Spend [0-9] .ear)</b>.+$", "\\1", x1[i])
           }
           rct_ <- 
             if (is.null(cst_)) {sub("^.+:\\s*", "", x1[i])
-            } else {sub(paste0("^.+", cst_), "", x1[i])} 
+            } else {sub(paste0("^.+", cst_, "<*/*b*>*"), "", x1[i])} 
           rct_ <- gsub("\\&lt;", "<", rct_)
           rct_ <- gsub("\\&gt;", ">", rct_)
           
