@@ -95,6 +95,11 @@ ui <- fluidPage(
       color: #e0c34c;
       border-color: #320e45;
     }
+    #copy_obsdn_mkdn {
+      background-color: #53386b;
+      color: #e0c34c;
+      border-color: #320e45;
+    }
     ")),
     htmlOutput("use_note"),
     tabsetPanel(
@@ -133,18 +138,26 @@ ui <- fluidPage(
                div(uiOutput("adv_run")),
                textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
                ), 
-      ### USER-INTERACTIVE FOR RUNNING FROM SERVER - INCLUDE DICE ROLLER AND BUTTON PER ADVERSARY???
       tabPanel("Obsidian - Daggerforge",
-               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You'll need to close and reopen Obsidian after uploading to access newly-added adversaries.")),
+               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
                htmlOutput("dgrfg_colossus_note"),
                downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
                div(h4("The downloaded .json will look like the below:")),
                verbatimTextOutput(outputId = "json_dl_prvw")
                ), 
-      ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN
+      ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN - INCLUDE CLICK-TO-COPY BUTTON
       tabPanel("Obsidian - ITS Theme",
-               div(h4("Copy from this tab to paste into Obsidian if running adversaries there. First build adversaries using details from the 'Customize' tab.")),
-               "WORK IN PROGRESS"
+               div(h4("Copy from this tab to paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+               fluidRow("WORK IN PROGRESS"),
+               ###
+               ### ACTIONBUTTON CURRENTLY NOT WORKING - START WITH 'PREVIEW' FIELD AND REVISIT THIS WHEN DONE
+               ###
+    #            actionButton("copy_obsdn_mkdn", 
+    #                         label = "Copy Obsidian ITS Theme Markdown to clipboard",
+    #                         onclick = "
+    # txt = document.getElementById('clpbrd_prvw').textContent;
+    # navigator.clipboard.writeText(txt);"),
+               verbatimTextOutput(outputId = "clpbrd_prvw")
                ),
       tabPanel("Credits",
                htmlOutput("sources")
@@ -157,7 +170,7 @@ ui <- fluidPage(
 )
 
 # Define server ================================================================
-server <- function(input, output) {
+server <- function(input, output, session) {
 
   output$use_note <- renderText({
     "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credit</b> tab)</p>"
@@ -302,15 +315,25 @@ server <- function(input, output) {
     filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
   })
   
+  minion_df <- reactive({ # used for the -non- 'Horde (#)' features set
+    req(feat_df())
+    if ("Minion" %in% feat_df()$adv_type) {
+      filter(feat_df(), adv_type == "Minion" & !grepl("Minion|Join", feat_name))
+    }
+  })
+  
   horde_df <- reactive({ # used for the -non- 'Horde (#)' features set
     req(feat_df())
     if ("Horde" %in% feat_df()$adv_type) {
-      filter(feat_df(), adv_type == "Horde" & !grepl("Horde \\(", feat_name))
+      filter(feat_df(), adv_type == "Horde" & !grepl("Horde \\(|Contains Multitudes", feat_name))
     }
   })
   
   feat_obsvr <- reactive({list(active_adv_ct_vec(), input$feat_fill_ct)})
   
+  ###
+  ### TODO: CREATE COLOSSUS FEATURES - USEFUL ANYWAY, AND RESOLVES ERROR DUE TO NOT HAVING ANYTHING TO POPULATE
+  ###
   # function to streamline the update...Input process
   update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx = NULL) {
     updateTextInput(inputId = namify(adv_nm, adv_num, paste0("featname_", inpt_num)),
@@ -321,18 +344,46 @@ server <- function(input, output) {
                     value = ifelse(is.null(val_idx), "", adv_df$feat_text[val_idx]))
   }
   
+  # Minion and Horde features always fill with a standard set whenever input$feat_fill_ct > 0
   # function to fill Minion features
-  fill_minion_feat <- function(id_ct, feat_df) {
-    df_ <- feat_df[feat_df$adv_type == "Minion",] # already sorted so Passive then Action 
-    update_inputs("Minion", id_ct, 1, df_, 1)
-    update_inputs("Minion", id_ct, 2, df_, 2)
+  fill_minion_feat <- function(id_ct, minion_feat_df) {
+    update_inputs("Minion", id_ct, 1, minion_feat_df, grep("Minion", minion_feat_df$feat_name))
+    update_inputs("Minion", id_ct, 2, minion_feat_df, grep("Join or Die", minion_feat_df$feat_name))
+    update_inputs("Minion", id_ct, 3, minion_feat_df, grep("Group Attack", minion_feat_df$feat_name))
   }
   
-  # function to ensure first Horde feat is always...the 'Horde' feat
-  fill_horde_feat <- function(id_ct, feat_df) {
-    df_ <- as.data.frame(feat_df[feat_df$adv_type == "Horde" & grepl("Horde \\(", feat_df$feat_name),])
-    update_inputs("Horde", id_ct, 1, df_, 1)
+  fill_horde_feat <- function(id_ct, horde_feat_df) {
+    update_inputs("Horde", id_ct, 1, horde_feat_df, grep("Horde \\(", horde_feat_df$feat_name))
+    update_inputs("Horde", id_ct, 2, horde_feat_df, grep("Contains Multitudes", horde_feat_df$feat_name))
   }
+  
+  # Minion and Horde adversaries always have their feature set filled (standard plus 'synergistic extra one' per each)
+  observeEvent(feat_obsvr(), {
+    req(active_adv_ct_vec())
+    if ("Minion" %in% names(active_adv_ct_vec())) {
+      for (i in 1:(active_adv_ct_vec()[["Minion"]])) {
+        fill_minion_feat(i, feat_df()[feat_df()$adv_type == "Minion",])
+      }
+    }
+    
+    if ("Horde" %in% names(active_adv_ct_vec())) {
+      for (i in 1:(active_adv_ct_vec()[["Horde"]])) {
+        fill_horde_feat(i, feat_df()[feat_df()$adv_type == "Horde",])
+      } # first two features are 'spoken for'
+      
+      if (input$feat_fill_ct > 2) { # populate as available
+        if (nrow(horde_df()) >= (as.numeric(input$feat_fill_ct) - 2)) {
+          
+          feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
+            feat_sampler_idx(active_adv_ct_vec()[["Horde"]], horde_df(), as.numeric(input$feat_fill_ct) - 2)
+          
+          for (j in 3:as.numeric(input$feat_fill_ct)) {
+            update_inputs("Horde", i, j, horde_df(), feat_idx_mat[i, j - 2])
+          }
+        }
+      }
+    }
+    })
   
   smpl_1 <- function(x){sample(x, size = 1, replace = FALSE, prob = NULL)}
   
@@ -361,6 +412,9 @@ server <- function(input, output) {
     } else {feat_mat}
   }
   
+  ###
+  ### TODO: force 'Frenzied Rage' in Bruiser feature set if they have 'Berserk' in the assigned features
+  ###
   # populate features appropriate to adversary type when user indicates >0 features to fill ----
   observeEvent(feat_obsvr(), {
     req(active_adv_ct_vec(),
@@ -372,42 +426,14 @@ server <- function(input, output) {
         if (!(adv_nm_ %in% c("Minion", "Horde"))) {
           feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
             feat_sampler_idx(adv_ct_, filter(feat_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct))
-        }
         
         for (j in 1:adv_ct_) { # per count within type
-          if (adv_nm_ == "Minion") {
-          fill_minion_feat(j, feat_df()) 
-          } else if (adv_nm_ == "Horde") {
-            fill_horde_feat(j, feat_df()[feat_df()$adv_type == adv_nm_,]) 
-            ###
-            ### MAY NEED TROUBLESHOOT - SOMETIMES DUPLICATES ENTRIES WHEN FEW OPTIONS ; MORE FEATURES AT LOWER LEVELS WOULD MINIMIZE RISK
-            ###
-            if (input$feat_fill_ct > 1) { # populate as available
-              if (nrow(horde_df()) >= (as.numeric(input$feat_fill_ct) - 1)) {
-                
-                feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
-                  feat_sampler_idx(adv_ct_, 
-                                   filter(horde_df(), adv_type == adv_nm_), 
-                                   as.numeric(input$feat_fill_ct) - 1)
-
-                for (k in 2:as.numeric(input$feat_fill_ct)) {
-                  update_inputs(adv_nm_, j, k, horde_df(), feat_idx_mat[j, k - 1])
-                }
-              }
+          for (k in 1:as.numeric(input$feat_fill_ct)) {
+            update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
             }
-            if (as.numeric(input$feat_fill_ct) < 5) {
-              for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
-                update_inputs(adv_nm_, j, k, data.frame(), NULL)
-              }
-            }
-            
-          } else {### non-Horde, non-Minion set
-            for (k in 1:as.numeric(input$feat_fill_ct)) {
-              update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
-            }
-            if (as.numeric(input$feat_fill_ct) < 5) {
-              for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
-                update_inputs(adv_nm_, j, k, data.frame(), NULL)
+          if (as.numeric(input$feat_fill_ct) < 5) {
+            for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
+              update_inputs(adv_nm_, j, k, data.frame(), NULL)
               }
             }
           }
@@ -513,6 +539,7 @@ server <- function(input, output) {
     }
   })
   
+  
   # server Run panel -----------------------------------------------------------
   # id text for outputting adversaries in order
   adv_runset <- reactive({
@@ -589,15 +616,20 @@ server <- function(input, output) {
   #output$RUNCHECK <- renderText(paste(stress_0_adv(), collapse = " / "))
   
   # server Obsidian - Daggerforge panel ----------------------------------------
+  
+  ###
+  ### TODO json_file does not update feature list set for export UNLESS at least one other detail changes...need to correct this
+  ###
+  
   json_file <- reactive({
     req(adv_runset())
     
     lapply(1:length(adv_runset()), \(i) {
       if (grepl("Colossus", adv_runset()[i])) {
         json_prep_adversary_col(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier,
-                                fwk_id = colossus_fwk()[i])
+                                fwk_id = colossus_fwk()[i], input$feat_fill_ct)
       } else {
-        json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier)
+        json_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier, input$feat_fill_ct)
       }
     }) |> 
       jsonify()
@@ -623,13 +655,24 @@ server <- function(input, output) {
   
   # server Obsidian - ITS Theme panel ------------------------------------------
   
+  obsdn_mkdn <- reactive({0})
+  
+  # observeEvent(input$copy_obsdn_mkdn, {
+  #   text <- "TEST FOR DEV"#processed_obsdn_mdkn()
+  #   obsdn_mkdn_2 <- obsdn_mkdn() + 1
+  #   session$sendCustomMessage("txt", input$copy_obsdn_mkdn)#text)
+  # })
+  
+  output$clpbrd_prvw <- renderText({input$copy_obsdn_mkdn})
+  
   # server Credits panel -------------------------------------------------------
   output$sources <- 
     renderUI({
       HTML(
         paste0(
           "<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
-          "<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>"
+          "<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>",
+          "<p>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed.</p>"
           )
         )
     })
