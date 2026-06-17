@@ -1,12 +1,14 @@
 # code to take user-specified Customize tab details into JSON structure for Daggerforge upload
 
-### REMEMBER COLOSSUS-SPECIFIC ELEMENTS - USE THE STRUCTURE BELOW AND POPULATE AS APPROPRIATE
-
 # function for processing features
 # version with -optional- text styling and features separated at end -----------
 
-list_features_obsdn <- function(inpt, typ, num, json = TRUE) {
+list_features_obsdn <- function(inpt, typ, num, auto_feat_ct) {
   # list Passives, then Actions, then Reactions...if feature text present
+  
+  # auto_feat_ct just tracks input$feat_fill_ct ; this helps ensure the feature list updates if only the feature text changes
+  feat_ct <- auto_feat_ct
+  
   feattypes_set <- reactive({
     c(if (has_feattxt(inpt, typ, num, 1)) {classify_feattyp(inpt, typ, num, 1)} else {0},
       if (has_feattxt(inpt, typ, num, 2)) {classify_feattyp(inpt, typ, num, 2)} else {0},
@@ -15,7 +17,6 @@ list_features_obsdn <- function(inpt, typ, num, json = TRUE) {
       if (has_feattxt(inpt, typ, num, 5)) {classify_feattyp(inpt, typ, num, 5)} else {0})
   })
   
-  ### TODO: convert &lt; to < and &gt; to > in feature text
   feat_list0 <- reactive({
     if (!all(feattypes_set() == 0)) {
       x <- 
@@ -62,7 +63,7 @@ list_features_obsdn <- function(inpt, typ, num, json = TRUE) {
 }
 
 # prep function for non-Colossus adversaries -----------------------------------
-json_prep_adversary <- function(inpt, typ, num, tr) {
+json_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
   adv_name <- 
     paste0(inpt[[namify(typ, num, "name")]], 
            if (typ == "Horde") {paste0(" (", inpt[[namify(typ, num, "perhp")]], "/HP)")})
@@ -115,41 +116,17 @@ json_prep_adversary <- function(inpt, typ, num, tr) {
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]]),
     xp = inpt[[namify(typ, num, "exp")]],
     source = "custom",
-    features = list_features_obsdn(inpt, typ, num, json = TRUE)
+    features = list_features_obsdn(inpt, typ, num, auto_feat_ct)
   )
 }
 
 # prep function for Colossus adversaries - note the category names are same as non-Colossus adversaries to fit Daggerforge structure ----
-###
-### SPECIFIC COMPONENTS WHERE FRAMEWORK / SEGMENT MAPPING DIFFERS
-# fwk / seg name -> name PLUS '(col)' AT END
-# fwk     desc -> desc PLUS SIZE (PASTE SIZE UP FRONT)
-# seg     parent_frame -> desc
-# fwk/seg mottac_adj{1/2/3/!4!} -> mottac set
-# fwk thresh_maj / thresh_sev / stress / exp -> no change
-# fwk hp / difficulty / wpn / rng / dmg_dice / dmg_avg / dmg_typ -> TRY SETTING TO '-'
-# seg thresh_maj / thresh_sev -> TRY SETTING TO '-'; MAY NEED TO POPULATE FROM THE ASSOCIATED FRAMEWORK...IF SO REFERENCE id_colossus_components IN RUN CODE
-# seg stress / exp -> TRY SETTING TO '-'
-# seg hp / difficulty / wpn / rng / dmg_dice / dmg_avg / dmg_typ -> no change
-
-
-### COLOSSUS FRAMEWORK MAPPING (colossus name -> function storage name):
-# name -> name
-# tr -> tr
-# desc -> desc
-### COLOSSUS SEGMENT MAPPING:
-###
-
-json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id) {
+json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
   fwk <- grepl("framework", typ)
   
   adv_name <- 
     if (fwk) {paste0(inpt[[namify(typ, num, "name")]], " (col fw)")
     } else {paste0(inpt[[namify(typ, num, "name")]], " (col sg)")}
-    
-  
-  ### MOTTAC: IF !fwk, LIST FWK NAME
-  ### DESCRIPTION: IF !fwk, LIST ADJACENT SEGMENTS
   
   mt1 <- if (inpt[[namify(typ, num, "mottac_adj1")]] != "") {inpt[[namify(typ, num, "mottac_adj1")]]}
   mt2 <- if (inpt[[namify(typ, num, "mottac_adj1")]] != "") {inpt[[namify(typ, num, "mottac_adj2")]]}
@@ -217,7 +194,7 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id) {
     },
     xp = if (fwk) {inpt[[namify(typ, num, "exp")]]} else {"-"},
     source = "custom",
-    features = list_features_obsdn(inpt, typ, num, json = TRUE)
+    features = list_features_obsdn(inpt, typ, num, auto_feat_ct)
   )
 }
 
