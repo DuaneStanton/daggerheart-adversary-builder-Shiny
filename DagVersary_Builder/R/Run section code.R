@@ -201,7 +201,10 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
   sub_ <- if (mns) {sub("^.+\\-\\s*([0-9]+)$", "\\1", f_d_t) |> as.numeric()}
   
   res <- 
-    if (grepl("tier", f_d_t)) {"tier"
+    if (grepl("tier", f_d_t)) {
+      if (grepl("square_tier", f_d_t)) {"square_tier"
+      } else if (grepl("tierside_left", f_d_t)){"tierside_left"
+      } else {"tier"}
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Avg") {"exp_dmg"
@@ -209,13 +212,24 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     } else if (grepl("minion_pasv", f_d_t)){"minion_pasv"
     } else if (grepl("perhp", f_d_t)){"horde_perhp"
     } else {stop(paste0("Error: check feat details and compare against prcs_nbr() function routing - input text was ", f_d_t))}
-  
+  message("res: ", res)###
   val_mod <- if (pls) {add_} else if (mns) {-sub_} else {0}
   
   # processing for tier-based detail
+  
   if (res == "tier") {
     tier_ <- as.numeric(tier) * ifelse(mult, mult_, 1) + val_mod
     tier_detail <- paste0("<b>", ceiling(tier_), "</b>")
+  }
+  
+  if (res == "square_tier") {
+    tier_sq <- as.numeric(tier)^2 * ifelse(mult, mult_, 1) + val_mod
+    tier_detail <- paste0("<b>", ceiling(tier_sq), "</b>")
+  }
+  
+  if (res == "tierside_left") { # currently no 'tierside_right', but if added later: c(4, 6, 8, 10)[as.numeric(tier)]
+    tier_dice_side <- c(8, 10, 12, 20)[as.numeric(tier)]
+    tier_detail <- paste0("<b>", tier_dice_side, "</b>")
   }
   
   # processing for average damage-based detail
@@ -239,25 +253,18 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     # halved-damage mod: even # dice: keep same sides, halve # dice, halve add-on
     #                    odd # dice: go down 1 side, go down 1 die, halve add-on
     
-    # dice change rules for damage multipliers:
-    # - multiplier is an integer : change dice count accordingly, keep sides the same
-    # - multiplier is 0.5 (half), start with even # dice count : halve the count, keep sides the same
-    # - any other case : calculate expected value for each of the following and use the one with closest expected value to {multiplier * expected value of initial setup}
-    # --- note: change 'reduce' to 'increase' and (min 4) to (max 20) if multiplier > 1
-    # -- reduce count by 1 (min 1 die) and reduce dice side by 1 (min 4)
-    # -- reduce count by 1 (min 1 die) and reduce dice side by 2 (min 4)
-    # -- reduce count by 2 (min 1 die) and reduce dice side by 1 (min 4)
-    # -- reduce count by 2 (min 1 die) and reduce dice side by 2 (min 4)
-    
-    if (mult && mult_ %% 1 == 0) {
+    # dice change for damage multipliers
+    if (mult && mult_ %% 1 == 0) { # integer multiplier: multiply dice count accordingly
       dice_side <- dice_sd
       dice_count <- mult_ * dice_ct
-      dice_mod <- ceiling(mult_ * dice_md)
-    } else if (mult && mult_ == 0.5 && dice_ct %% 2 == 0) {
+      dice_mod <- ceiling(mult_ * dice_md) + val_mod
+    } else if (mult && mult_ == 0.5 && dice_ct %% 2 == 0) { # 1/2 multiplier and starting w/ even # dice: halve dice count
       dice_side <- dice_sd
       dice_count <- mult_ * dice_ct
-      dice_mod <- dice_md / 2
-    } else if (mult && mult_ > 1) {
+      dice_mod <- dice_md / 2 + val_mod
+      # other non-integer multiplier: add (mult_ > 1) or remove (mult_ < 1) dice count and/or tweak dice '+' modifier
+      # keep option with expected value closest to {mult_ * original dice expected value}
+    } else if (mult && mult_ > 1) { 
       dice_eval_chk <- expand.grid(side = dice_sides[dice_sides >= dice_sd],
                                    count = dice_ct + c(0, 1, 2),
                                    dice_mod = c(0, dice_md, dice_md * mult_))
@@ -269,7 +276,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
       
       dice_side <- dice_eval_chk$side[best_dice]
       dice_count <- dice_eval_chk$count[best_dice]
-      dice_mod <- dice_eval_chk$dice_mod[best_dice]
+      dice_mod <- dice_eval_chk$dice_mod[best_dice] + val_mod
     } else if (mult && mult_ < 1) {
       dice_eval_chk <- expand.grid(side = dice_sides[dice_sides <= dice_sd],
                                    count = (dice_ct - c(0, 1, 2))[(dice_ct - c(0, 1, 2)) >= 1],
@@ -282,36 +289,12 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
       
       dice_side <- dice_eval_chk$side[best_dice]
       dice_count <- dice_eval_chk$count[best_dice]
-      dice_mod <- dice_eval_chk$dice_mod[best_dice]
-    } else {
+      dice_mod <- dice_eval_chk$dice_mod[best_dice] + val_mod
+    } else { # dice details but NOT multiplication modified
       dice_side <- dice_sd
       dice_count <- dice_ct
-      dice_mod <- dice_md
+      dice_mod <- dice_md + val_mod
     }
-    
-    # dice_side <- 
-    #   if (mult && mult_ == 0.5) {
-    #     if (dice_ct %% 2 == 0) {dice_sd
-    #     } else if (dice_sd %in% c(4, 6)) {4 # odd count: go down a side (and keep count the same); offer not valid if using d4s; go down -2- sides if already at 1 die
-    #     } else if (dice_ct == 1) {
-    #     } else {dice_sides[max(which(dice_sides < dice_sd))]}
-    #   } else if (mult && mult_ == 1.5) {# go up a side (and keep count the same); offers not valid if using d20s
-    #     if (dice_sd == 20) {20} else {dice_sides[min(which(dice_sides > dice_sd))]}
-    #   } else {dice_sd}
-    # 
-    # dice_count <-
-    #   if (mult && ((mult_ == 0.5 & dice_sd > 4))) {
-    #     if (dice_ct %% 2 == 0) {dice_ct / 2
-    #     } else {max(dice_ct - 1, 1)}
-    #   } else if (mult && (mult_ == 1.5 & dice_sd < 20)) {dice_ct
-    #   } else if (mult) {ceiling(dice_ct * mult_)
-    #   } else {dice_ct}
-    # 
-    # dice_mod <- 
-    #   if (mult && (mult_ == 0.5 & dice_sd == 4)){floor(mult_ * dice_md)
-    #   } else if (mult && (mult_ == 1.5 & dice_sd == 20)) {ceiling(mult_ * dice_md)
-    #   } else  if (mult) {ceiling(mult_ * dice_md)
-    #   } else (dice_md)
     
     dice_mod_txt <- if (dice_mod != 0){ifelse(dice_mod > 0, paste0("+", dice_mod), as.character(dice_mod))}
     
@@ -328,7 +311,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
   }
   
   # payoff: processed output to plug in to the feature text
-  if (res == "tier"){tier_detail
+  if (res %in% c("tier", "square_tier", "tierside_left")) {tier_detail
   } else if (res == "avg_dmg") {avg_dmg_detail
   } else if (res == "exp_dmg") {dice_exp_dmg
   } else if (res == "dice") {dice_detail
@@ -359,13 +342,9 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
     avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
 
-    for (z in 1:length(ptrns)) {
-      txt_ <- 
-        sub(pattern = ptrns[z], 
-            replacement = 
-              prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_, 
-                       minion_pasv = minion_pasv, horde_perhp = horde_perhp),
-            x = txt_)
+    for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
+      stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
+        prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_, minion_pasv, horde_perhp)
     }
     
     txt_
@@ -391,9 +370,9 @@ list_features <- function(inpt, typ, num) {
         do.call(
           what = rbind,
           args = lapply(1:length(feattypes_set()), \(z){
-            data.frame(idx = z, typval = feattypes_set()[z],
-                       txt = process_feature(inpt, typ, num, z)  |> 
-                             process_feat_txt_dtl(inpt = inpt, typ = typ, num = num)) })
+            txt_ <- process_feature(inpt, typ, num, z)
+            txt_ <- process_feat_txt_dtl(inpt, typ, num, txt_)
+            data.frame(idx = z, typval = feattypes_set()[z], txt = txt_) })
         )
       x <- x[x$typval > 0,]
       x <- x[order(x$typval),]
@@ -669,7 +648,7 @@ build_colossus_fw_run_ui <- function(inpt, col_elemname, tr) {
     fluidRow(column(width = 12, list_features(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(column(width = 12, msg_status(inpt, a.t(col_elemname), a.n(col_elemname)))),
     fluidRow(div(class="inline",
-                 ### ADD 'Defeated' TO THE CONDITION SET???
+                 ### TODO: ADD 'Defeated' TO THE CONDITION SET???
                  checkboxGroupInput(namify(a.t(col_elemname), a.n(col_elemname), "conds"), 
                                     label = "Conditions: ", choices = c("Hidden", "Restrained", "Vulnerable", "Defeated"), 
                                     inline = TRUE))),
