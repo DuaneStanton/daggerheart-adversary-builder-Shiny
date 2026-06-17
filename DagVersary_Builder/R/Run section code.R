@@ -187,9 +187,9 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
 # function to input designated adversary-specific feature text details ---------
 # note: designated-input structure MUST be of the form '<<{DETAIL TEXT}>>'
 
-# first: useful helper function for processing the details
+# first: useful helper function for processing feature detail text
 # function to process the detail text and return the 'populate' value with bold HTML formatting ----
-prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
+prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NULL, horde_perhp = NULL) {
   f_d_t <- gsub("<<|>>", "", feat_det_txt)
   # note: {DETAIL TEXT} involving multiplication / addition / subtraction -always- has the below form
   # {#}x {#d#  for dice // # for average dmg // 'tier' for tier} -/+{#} ; may or may not have multiplier AND add/sub
@@ -206,7 +206,9 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
     } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Avg") {"exp_dmg"
     } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Average"){"dice"
-    } else {stop("Error: check feat details and compare against prcs_nbr() function routing")}
+    } else if (grepl("minion_pasv", f_d_t)){"minion_pasv"
+    } else if (grepl("perhp", f_d_t)){"horde_perhp"
+    } else {stop(paste0("Error: check feat details and compare against prcs_nbr() function routing - input text was ", f_d_t))}
   
   val_mod <- if (pls) {add_} else if (mns) {-sub_} else {0}
   
@@ -229,28 +231,87 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
     dice_sign <- sub("^.*[0-9]+d[0-9]{1,2}\\s*(\\D+)[0-9]*$", "\\1", dice_dmg_txt)
     dice_sign <- ifelse(grepl("\\+", dice_sign), 1, -1)
     dice_md <- sub("^.*[0-9]+d[0-9]{1,2}\\s*\\D+([0-9]*)$", "\\1", dice_dmg_txt)
-    dice_md <- ifelse(grepl("d", dice_md), 0, as.numeric(dice_md) * dice_sign)
+    dice_md <- ifelse(grepl("d", dice_md), 0, as.numeric(dice_md) * dice_sign) # 0 modifier if nothing after {#}d{#}
     dice_sides <- c(4, 6, 8, 10, 12, 20)
-    dice_exp_dmg <- if (res == "exp_dmg") {dice_ct * (1 + dice_sd) / 2 + dice_md}
-    dice_exp_dmg <- if (res == "exp_dmg") {ceiling(if (mult) {mult_ * dice_exp_dmg} else {dice_exp_dmg}) + val_mod}
+    dice_exp_dmg <- dice_ct * (1 + dice_sd) / 2 + dice_md
+    if (res == "exp_dmg") {dice_exp_dmg <- ceiling(if (mult) {mult_ * dice_exp_dmg} else {dice_exp_dmg}) + val_mod}
     
-    dice_side <- 
-      if (mult && mult_ == 0.5) {# go down a side (and keep count the same); offer not valid if using d4s
-        if (dice_sd == 4) {4} else {dice_sides[max(which(dice_sides < dice_sd))]}
-      } else if (mult && mult_ == 1.5) {# go up a side (and keep count the same); offers not valid if using d20s
-        if (dice_sd == 20) {20} else {dice_sides[min(which(dice_sides > dice_sd))]}
-      } else {dice_sd}
+    # halved-damage mod: even # dice: keep same sides, halve # dice, halve add-on
+    #                    odd # dice: go down 1 side, go down 1 die, halve add-on
     
-    dice_count <-
-      if (mult && ((mult_ == 0.5 & dice_sd > 4) | (mult_ == 1.5 & dice_sd < 20))) {dice_ct
-      } else if (mult) {ceiling(dice_ct * mult_)
-      } else {dice_ct}
+    # dice change rules for damage multipliers:
+    # - multiplier is an integer : change dice count accordingly, keep sides the same
+    # - multiplier is 0.5 (half), start with even # dice count : halve the count, keep sides the same
+    # - any other case : calculate expected value for each of the following and use the one with closest expected value to {multiplier * expected value of initial setup}
+    # --- note: change 'reduce' to 'increase' and (min 4) to (max 20) if multiplier > 1
+    # -- reduce count by 1 (min 1 die) and reduce dice side by 1 (min 4)
+    # -- reduce count by 1 (min 1 die) and reduce dice side by 2 (min 4)
+    # -- reduce count by 2 (min 1 die) and reduce dice side by 1 (min 4)
+    # -- reduce count by 2 (min 1 die) and reduce dice side by 2 (min 4)
     
-    dice_mod <- 
-      if (mult && (mult_ == 0.5 & dice_sd == 4)){floor(mult_ * dice_md)
-      } else if (mult && (mult_ == 1.5 & dice_sd == 20)) {ceiling(mult_ * dice_md)
-      } else  if (mult) {ceiling(mult_ * dice_md)
-      } else (dice_md)
+    if (mult && mult_ %% 1 == 0) {
+      dice_side <- dice_sd
+      dice_count <- mult_ * dice_ct
+      dice_mod <- ceiling(mult_ * dice_md)
+    } else if (mult && mult_ == 0.5 && dice_ct %% 2 == 0) {
+      dice_side <- dice_sd
+      dice_count <- mult_ * dice_ct
+      dice_mod <- dice_md / 2
+    } else if (mult && mult_ > 1) {
+      dice_eval_chk <- expand.grid(side = dice_sides[dice_sides >= dice_sd],
+                                   count = dice_ct + c(0, 1, 2),
+                                   dice_mod = c(0, dice_md, dice_md * mult_))
+      
+      dice_eval_chk$val <-
+        dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
+    
+      best_dice <- which.min(abs(dice_exp_dmg * mult_ - dice_eval_chk$val))
+      
+      dice_side <- dice_eval_chk$side[best_dice]
+      dice_count <- dice_eval_chk$count[best_dice]
+      dice_mod <- dice_eval_chk$dice_mod[best_dice]
+    } else if (mult && mult_ < 1) {
+      dice_eval_chk <- expand.grid(side = dice_sides[dice_sides <= dice_sd],
+                                   count = (dice_ct - c(0, 1, 2))[(dice_ct - c(0, 1, 2)) >= 1],
+                                   dice_mod = c(0, dice_md, dice_md * mult_))
+      
+      dice_eval_chk$val <-
+        dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
+      
+      best_dice <- which.min(abs(dice_exp_dmg * mult_ - dice_eval_chk$val))
+      
+      dice_side <- dice_eval_chk$side[best_dice]
+      dice_count <- dice_eval_chk$count[best_dice]
+      dice_mod <- dice_eval_chk$dice_mod[best_dice]
+    } else {
+      dice_side <- dice_sd
+      dice_count <- dice_ct
+      dice_mod <- dice_md
+    }
+    
+    # dice_side <- 
+    #   if (mult && mult_ == 0.5) {
+    #     if (dice_ct %% 2 == 0) {dice_sd
+    #     } else if (dice_sd %in% c(4, 6)) {4 # odd count: go down a side (and keep count the same); offer not valid if using d4s; go down -2- sides if already at 1 die
+    #     } else if (dice_ct == 1) {
+    #     } else {dice_sides[max(which(dice_sides < dice_sd))]}
+    #   } else if (mult && mult_ == 1.5) {# go up a side (and keep count the same); offers not valid if using d20s
+    #     if (dice_sd == 20) {20} else {dice_sides[min(which(dice_sides > dice_sd))]}
+    #   } else {dice_sd}
+    # 
+    # dice_count <-
+    #   if (mult && ((mult_ == 0.5 & dice_sd > 4))) {
+    #     if (dice_ct %% 2 == 0) {dice_ct / 2
+    #     } else {max(dice_ct - 1, 1)}
+    #   } else if (mult && (mult_ == 1.5 & dice_sd < 20)) {dice_ct
+    #   } else if (mult) {ceiling(dice_ct * mult_)
+    #   } else {dice_ct}
+    # 
+    # dice_mod <- 
+    #   if (mult && (mult_ == 0.5 & dice_sd == 4)){floor(mult_ * dice_md)
+    #   } else if (mult && (mult_ == 1.5 & dice_sd == 20)) {ceiling(mult_ * dice_md)
+    #   } else  if (mult) {ceiling(mult_ * dice_md)
+    #   } else (dice_md)
     
     dice_mod_txt <- if (dice_mod != 0){ifelse(dice_mod > 0, paste0("+", dice_mod), as.character(dice_mod))}
     
@@ -258,11 +319,21 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier) {
     dice_exp_dmg <- paste0("<b>", dice_exp_dmg, "</b>")
   }
   
+  if (res == "minion_pasv") {
+    minion_passive_detail <- ifelse(mult, mult_, 1) * minion_pasv + val_mod
+  }
+  
+  if (res == "horde_perhp") {
+    horde_perhp_detail <- ifelse(mult, mult_, 1) * horde_perhp + val_mod
+  }
+  
   # payoff: processed output to plug in to the feature text
   if (res == "tier"){tier_detail
   } else if (res == "avg_dmg") {avg_dmg_detail
   } else if (res == "exp_dmg") {dice_exp_dmg
-  } else if (res == "dice") {dice_detail}
+  } else if (res == "dice") {dice_detail
+  } else if (res == "minion_pasv") {minion_passive_detail
+  } else if (res == "horde_perhp") {horde_perhp_detail}
 }
 
 # 'main' feat processing function to replace <<DETAIL>> with desired adversary detail ----
@@ -281,10 +352,8 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
       substring(txt, first = caret_idx[z, "start"], last = caret_idx[z, "end"])
     }, character(1L))
     
-    if (typ == "Minion") {
-      p_rep <- "min"
-      min_pasv <- paste0("<b>", inpt[[namify(typ, num, "minion_pasv")]], "</b>")
-    } 
+    minion_pasv <- if (typ == "Minion") {inpt[[namify(typ, num, "minion_pasv")]]}
+    horde_perhp <- if (typ == "Horde") {inpt[[namify(typ, num, "perhp")]]}
     
     tier_ <- inpt[["tier"]]
     dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
@@ -294,8 +363,8 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
       txt_ <- 
         sub(pattern = ptrns[z], 
             replacement = 
-              if (ptrns[z] == "<<minion_pasv>>") { min_pasv 
-              } else {prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_)},
+              prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_, 
+                       minion_pasv = minion_pasv, horde_perhp = horde_perhp),
             x = txt_)
     }
     
