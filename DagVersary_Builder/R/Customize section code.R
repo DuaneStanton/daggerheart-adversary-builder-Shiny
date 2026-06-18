@@ -167,4 +167,46 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
     featurize(typ, num, 5)
     
   )
+}
+
+# function to streamline the update...Input process
+update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx = NULL) {
+  updateTextInput(inputId = namify(adv_nm, adv_num, paste0("featname_", inpt_num)),
+                  value = ifelse(is.null(val_idx), "", adv_df$feat_name[val_idx]))
+  updateSelectInput(inputId = namify(adv_nm, adv_num, paste0("feattype_", inpt_num)),
+                    selected = if (is.null(val_idx)) {"Passive"} else {adv_df$feat_type[val_idx]})
+  updateTextInput(inputId = namify(adv_nm, adv_num, paste0("feattext_", inpt_num)),
+                  value = ifelse(is.null(val_idx), "", adv_df$feat_text[val_idx]))
+}
+
+# Minion and Horde features always fill with a standard set whenever input$feat_fill_ct > 0
+# function to fill Minion features
+fill_minion_feat <- function(id_ct, minion_feat_df) {
+  update_inputs("Minion", id_ct, 1, minion_feat_df, grep("Minion", minion_feat_df$feat_name))
+  update_inputs("Minion", id_ct, 2, minion_feat_df, grep("Join or Die", minion_feat_df$feat_name))
+  update_inputs("Minion", id_ct, 3, minion_feat_df, grep("Group Attack", minion_feat_df$feat_name))
+}
+
+fill_horde_feat <- function(id_ct, horde_feat_df) {
+  update_inputs("Horde", id_ct, 1, horde_feat_df, grep("Horde \\(", horde_feat_df$feat_name))
+  update_inputs("Horde", id_ct, 2, horde_feat_df, grep("Contains Multitudes", horde_feat_df$feat_name))
+}
+
+fill_col_fw_feat <- function(id_ct, col_fw_feat_df) {
+  update_inputs("Colossus_framework", id_ct, 1, col_fw_feat_df, grep("Colossal Power", col_fw_feat_df$feat_name))
+}
+
+# generating a feature set per adversary, with no repeats of features per adversary
+feat_sampler_idx <- function(n_sametyp_adv, feat_df, n_feat) {
+  feat_n <- min(nrow(feat_df), n_feat)
+  idx_psv <- which(feat_df$feat_type == "Passive")
+  idx_act <- which(feat_df$feat_type == "Action")
+  idx_rct <- which(feat_df$feat_type == "Reaction")
+  idx_set <- c(idx_psv, idx_act, idx_rct)
+  feat_mat <- matrix(nrow = n_sametyp_adv, ncol = feat_n)
+  for (i in 1:n_sametyp_adv) {
+    feat_mat[i,] <- sample(idx_set, size = feat_n, replace = FALSE)
   }
+  feat_mat
+}
+

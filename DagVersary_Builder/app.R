@@ -136,7 +136,7 @@ ui <- fluidPage(
       tabPanel("Run",
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
                div(uiOutput("adv_run")),
-               textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
+               #textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
                ), 
       tabPanel("Obsidian - Daggerforge",
                div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
@@ -315,17 +315,17 @@ server <- function(input, output, session) {
     filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
   })
   
-  minion_df <- reactive({ # used for the -non- 'Horde (#)' features set
-    req(feat_df())
-    if ("Minion" %in% feat_df()$adv_type) {
-      filter(feat_df(), adv_type == "Minion" & !grepl("Minion|Join", feat_name))
-    }
-  })
-  
-  horde_df <- reactive({ # used for the -non- 'Horde (#)' features set
+  horde_feat_df <- reactive({ # used for the -non- 'Horde (#)' features set
     req(feat_df())
     if ("Horde" %in% feat_df()$adv_type) {
       filter(feat_df(), adv_type == "Horde" & !grepl("Horde \\(|Contains Multitudes", feat_name))
+    }
+  })
+  
+  col_fw_feat_df <- reactive({ # used for the -non- 'Colossal Power' features set
+    req(feat_df())
+    if ("Colossus_framework" %in% feat_df()$adv_type) {
+      filter(feat_df(), adv_type == "Colossus_framework" & !grepl("Colossal Power", feat_name))
     }
   })
   
@@ -334,30 +334,9 @@ server <- function(input, output, session) {
   ###
   ### TODO: CREATE COLOSSUS FEATURES - USEFUL ANYWAY, AND RESOLVES ERROR DUE TO NOT HAVING ANYTHING TO POPULATE
   ###
-  # function to streamline the update...Input process
-  update_inputs <- function(adv_nm, adv_num, inpt_num, adv_df, val_idx = NULL) {
-    updateTextInput(inputId = namify(adv_nm, adv_num, paste0("featname_", inpt_num)),
-                    value = ifelse(is.null(val_idx), "", adv_df$feat_name[val_idx]))
-    updateSelectInput(inputId = namify(adv_nm, adv_num, paste0("feattype_", inpt_num)),
-                      selected = if (is.null(val_idx)) {"Passive"} else {adv_df$feat_type[val_idx]})
-    updateTextInput(inputId = namify(adv_nm, adv_num, paste0("feattext_", inpt_num)),
-                    value = ifelse(is.null(val_idx), "", adv_df$feat_text[val_idx]))
-  }
   
-  # Minion and Horde features always fill with a standard set whenever input$feat_fill_ct > 0
-  # function to fill Minion features
-  fill_minion_feat <- function(id_ct, minion_feat_df) {
-    update_inputs("Minion", id_ct, 1, minion_feat_df, grep("Minion", minion_feat_df$feat_name))
-    update_inputs("Minion", id_ct, 2, minion_feat_df, grep("Join or Die", minion_feat_df$feat_name))
-    update_inputs("Minion", id_ct, 3, minion_feat_df, grep("Group Attack", minion_feat_df$feat_name))
-  }
-  
-  fill_horde_feat <- function(id_ct, horde_feat_df) {
-    update_inputs("Horde", id_ct, 1, horde_feat_df, grep("Horde \\(", horde_feat_df$feat_name))
-    update_inputs("Horde", id_ct, 2, horde_feat_df, grep("Contains Multitudes", horde_feat_df$feat_name))
-  }
-  
-  # Minion and Horde adversaries always have their feature set filled (standard plus 'synergistic extra one' per each)
+  # Minion adversaries always have their feature set filled (standard plus 'synergistic extra one' per each)
+  # Horde adversaries and Colossus frameworks are similar (standard starting set) but have some flexibility
   observeEvent(feat_obsvr(), {
     req(active_adv_ct_vec())
     if ("Minion" %in% names(active_adv_ct_vec())) {
@@ -369,48 +348,41 @@ server <- function(input, output, session) {
     if ("Horde" %in% names(active_adv_ct_vec())) {
       for (i in 1:(active_adv_ct_vec()[["Horde"]])) {
         fill_horde_feat(i, feat_df()[feat_df()$adv_type == "Horde",])
-      } # first two features are 'spoken for'
+      }
       
-      if (input$feat_fill_ct > 2) { # populate as available
-        if (nrow(horde_df()) >= (as.numeric(input$feat_fill_ct) - 2)) {
-          
-          feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
-            feat_sampler_idx(active_adv_ct_vec()[["Horde"]], horde_df(), as.numeric(input$feat_fill_ct) - 2)
-          
-          for (j in 3:as.numeric(input$feat_fill_ct)) {
-            update_inputs("Horde", i, j, horde_df(), feat_idx_mat[i, j - 2])
+      # first two features are 'spoken for'
+      if (input$feat_fill_ct > 2 &&
+          nrow(horde_feat_df()) >= (as.numeric(input$feat_fill_ct) - 2)) { # populate as available
+        feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
+          feat_sampler_idx(active_adv_ct_vec()[["Horde"]], horde_feat_df(), as.numeric(input$feat_fill_ct) - 2)
+
+        for (i in 1:(active_adv_ct_vec()[["Horde"]])) {
+          for (j in 1:(ncol(feat_idx_mat))) {
+            update_inputs("Horde", i, j + 2, horde_feat_df(), feat_idx_mat[i, j])
           }
         }
       }
     }
-    })
-  
-  smpl_1 <- function(x){sample(x, size = 1, replace = FALSE, prob = NULL)}
-  
-  # generating a feature set per adversary, with no repeats of features per adversary
-  feat_sampler_idx <- function(n_sametyp_adv, feat_df, n_feat) {
-    feat_n <- min(nrow(feat_df), n_feat)
-    idx_psv <- which(feat_df$feat_type == "Passive")
-    idx_act <- which(feat_df$feat_type == "Action")
-    idx_rct <- which(feat_df$feat_type == "Reaction")
-    idx_set <- c(idx_psv, idx_act, idx_rct)
-    # first selection must be either passive or action
-    # ...ensure no repeats per adversary for feature set
-    feat_mat <- matrix(nrow = n_sametyp_adv, ncol = feat_n)
-    smpl_ <- sample(c(idx_psv, idx_act), size = n_sametyp_adv, replace = TRUE)
-    feat_mat[, 1] <- smpl_
     
-    if (feat_n > 1) {
-      for (i in 1:n_sametyp_adv) {
-        for (j in 2:feat_n) {
-          if (length(setdiff(idx_set, feat_mat[i, 1:(j- 1)])) >= 1) {
-            feat_mat[i, j] <- smpl_1(setdiff(idx_set, feat_mat[i, 1:(j - 1)]))
+    if ("Colossus_framework" %in% names(active_adv_ct_vec())) {
+      for (i in 1:(active_adv_ct_vec()[["Colossus_framework"]])) {
+        fill_col_fw_feat(i, feat_df()[feat_df()$adv_type == "Colossus_framework",])
+      }
+      
+      # first two features are 'spoken for'
+      if (input$feat_fill_ct > 1 &&
+          nrow(col_fw_feat_df()) >= (as.numeric(input$feat_fill_ct) - 1)) { # populate as available
+        feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
+          feat_sampler_idx(active_adv_ct_vec()[["Colossus_framework"]], col_fw_feat_df(), as.numeric(input$feat_fill_ct) - 1)
+        
+        for (i in 1:(active_adv_ct_vec()[["Colossus_framework"]])) {
+          for (j in 1:(ncol(feat_idx_mat))) {
+            update_inputs("Colossus_framework", i, j + 1, col_fw_feat_df(), feat_idx_mat[i, j])
           }
         }
       }
-      feat_mat
-    } else {feat_mat}
-  }
+    }
+  })
   
   ###
   ### TODO: force 'Frenzied Rage' in Bruiser feature set if they have 'Berserk' in the assigned features
@@ -423,7 +395,7 @@ server <- function(input, output, session) {
       for (i in 1:length(active_adv_ct_vec())) { # per adversary type
         adv_nm_ <- names(active_adv_ct_vec())[i]
         adv_ct_ <- unname(active_adv_ct_vec())[i]
-        if (!(adv_nm_ %in% c("Minion", "Horde"))) {
+        if (!(adv_nm_ %in% c("Minion", "Horde", "Colossus_framework"))) {
           feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
             feat_sampler_idx(adv_ct_, filter(feat_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct))
         
@@ -437,7 +409,6 @@ server <- function(input, output, session) {
               }
             }
           }
-          ### ADD COLOSSUS FRAMEWORK EXCEPTION FOR FEATURE 1 AS FIXED???
         }
       }
     } else if (input$feat_fill_ct == 0) { # reset to defaults
