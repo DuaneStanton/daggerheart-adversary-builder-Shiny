@@ -78,8 +78,6 @@ build_adv_spec_ui <- function(typ, num, tr) {
                  div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
       )),
     textify(typ, num, "exp", "Experience(s) e.g. 'Conjurer of cheap tricks +2'", "350px"),
-    ### DEV NOTE: REMOVE THIS ON RUN/OBSIDIAN IF ONLY PLACEHOLDER TEXT
-    ### DEVNOTE: In the "Run" and "Obsidian" tabs, bold numbers / dice / "spend a Fear" (or spend {#} fear)
     featurize(typ, num, 1),
     featurize(typ, num, 2),
     featurize(typ, num, 3),
@@ -154,9 +152,6 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
                    div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) ))
       )
       },
-    ###
-    ### TODO: frameworks -always- have the Colossal Power reaction (make feature 1); everything else is modifiable
-    ###       LIKELY NEED TO ENFORCE THIS IN THE 'Run section code'
     featurize(typ, num, 1, 
               nm_val = ifelse(grepl("framework", typ), "Colossal Power", ""),
               ft_sel = if (grepl("framework", typ)) {"Reaction"},
