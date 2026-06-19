@@ -16,22 +16,28 @@ source("R/Supporting Functions and Code.R")
 source("R/Customize section code.R")
 source("R/Run section code.R")
 source("R/Obsidian_Daggerforge code.R")
+source("R/Obsidian_ITS Theme code.R")
 
 # Define UI ====================================================================
 ui <- fluidPage(
     titlePanel("Daggerheart Adversary Builder"),
     tags$head(tags$style("
-    .adv-count-sel {
-      width: 100px;
+    .container-fluid { background-color: #d3c0d3; }
+    .nav { 
+      background-color: #463146;
+      border-radius: 10px;
     }
+    .adv-count-sel { width: 100px; }
     .adv-input {
       border: 4px solid #320e45;
+      border-radius: 5px;
       background: #7d4e7d;
       color: #eddb9d;
       padding-left: 10px;
       padding-bottom: 20px;
     }
     .adv-run {
+      border-radius: 5px;
       display: flex;
       padding-left: 5px;
       margin-left: 5px;
@@ -54,15 +60,9 @@ ui <- fluidPage(
       background: #c2bee8;
       color: #320e45;
     }
-    .shiny-html-output .shiny-bound-output {
-      margin-right: 5px;
-    }
-    .form-control {
-      background: #efefef
-    }
-    .selectize-input.full.has-items.has-options {
-      background: #f2efce
-    }
+    .shiny-html-output .shiny-bound-output { margin-right: 5px; }
+    .form-control { background: #efefef }
+    .selectize-input.full.has-items.has-options { background: #f2efce }
     .form-group {
       margin-bottom: 10px !important;
       width: 100%;
@@ -77,9 +77,7 @@ ui <- fluidPage(
       align-items: flex-end;
       column-gap: 10px;
     }
-    .bottom-aligned > div {
-      flex-grow: 1;
-    }
+    .bottom-aligned > div { flex-grow: 1; }
     .inline label{ 
       display: table-cell; 
       text-align: center; 
@@ -92,8 +90,9 @@ ui <- fluidPage(
     }
     #json_dl {
       background-color: #53386b;
-      color: #e0c34c;
       border-color: #320e45;
+      color: #e0c34c;
+      font-size: 18px;
     }
     #copy_obsdn_mkdn {
       background-color: #53386b;
@@ -102,8 +101,8 @@ ui <- fluidPage(
     }
     ")),
     htmlOutput("use_note"),
-    tabsetPanel(
-      tabPanel("Start",
+    tabsetPanel(type = "pills",
+      tabPanel(div("Start", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
                numericInput("party_total",
                             label = "# party members", value = 4, step = 1, min = 1, width = "140px"),
@@ -126,19 +125,19 @@ ui <- fluidPage(
                htmlOutput("battle_points"),
                htmlOutput("colossus_note")
                ),
-      tabPanel("Customize",
+      tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
                htmlOutput("dmg_note"),
                div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
                    selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
                uiOutput("adv_spec")
                ), 
-      tabPanel("Run",
+      tabPanel(div("Run", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
                div(uiOutput("adv_run")),
                #textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
                ), 
-      tabPanel("Obsidian - Daggerforge",
+      tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
                htmlOutput("dgrfg_colossus_note"),
                downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
@@ -146,7 +145,7 @@ ui <- fluidPage(
                verbatimTextOutput(outputId = "json_dl_prvw")
                ), 
       ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN - INCLUDE CLICK-TO-COPY BUTTON
-      tabPanel("Obsidian - ITS Theme",
+      tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Copy from this tab to paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
                fluidRow("WORK IN PROGRESS"),
                ###
@@ -159,21 +158,22 @@ ui <- fluidPage(
     # navigator.clipboard.writeText(txt);"),
                verbatimTextOutput(outputId = "clpbrd_prvw")
                ),
-      tabPanel("Credits",
-               htmlOutput("sources")
-               ), 
-      tabPanel("Feature Listing",
+      tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Lookup table of features for adversaries")),
+               div(uiOutput("feat_tbl_msg")),
                div(dataTableOutput("features_df"))
-               )
+               ),
+    tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
+             htmlOutput("sources")
+             )
       )
 )
 
 # Define server ================================================================
 server <- function(input, output, session) {
-
+  
   output$use_note <- renderText({
-    "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credit</b> tab)</p>"
+    "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credits</b> tab)</p>"
   })
 
   ### TODO:
@@ -199,12 +199,6 @@ server <- function(input, output, session) {
     names(v) <- adv_types
     v
   })
-  
-  ###
-  ### TODO: NEED AT MINIMUM AS MANY SEGMENTS AS FRAMEWORKS - PROVIDE MESSAGE IF THIS CONDITION IS NOT MET
-  ### TODO: PROVIDE A WARNING IF # FRAMEWORKS > 1
-  ### TODO: PROVIDE A MESSAGE THAT BATTLE POINTS BUDGET ISN'T REALLY APPLICABLE FOR COLOSSI - CREATE SOMETHING THAT FOLLOWS THE FICTION AND WILL BE FUN FOR YOUR CAMPAIGN!
-  ###
   
   active_adv_ct_vec <- reactive({adv_ct_vec()[adv_ct_vec() > 0]})
   
@@ -311,8 +305,8 @@ server <- function(input, output, session) {
     })
   
   feat_df <- reactive({ # note: already sorted by type, then tier, then passive/action/reaction, then feat name
-    req(active_adv_ct_vec())
-    filter(feat_ref_df, tier == input$tier, adv_type %in% names(active_adv_ct_vec()))
+    req(active_adv_ct_vec()) # note: tier should only be NA for 'general use' features
+    filter(feat_ref_df, tier == input$tier | is.na(tier), adv_type %in% c("general use", names(active_adv_ct_vec())))
   })
   
   horde_feat_df <- reactive({ # used for the -non- 'Horde (#)' features set
@@ -330,10 +324,6 @@ server <- function(input, output, session) {
   })
   
   feat_obsvr <- reactive({list(active_adv_ct_vec(), input$feat_fill_ct)})
-  
-  ###
-  ### TODO: CREATE COLOSSUS FEATURES - USEFUL ANYWAY, AND RESOLVES ERROR DUE TO NOT HAVING ANYTHING TO POPULATE
-  ###
   
   # Minion adversaries always have their feature set filled (standard plus 'synergistic extra one' per each)
   # Horde adversaries and Colossus frameworks are similar (standard starting set) but have some flexibility
@@ -384,9 +374,6 @@ server <- function(input, output, session) {
     }
   })
   
-  ###
-  ### TODO: force 'Frenzied Rage' in Bruiser feature set if they have 'Berserk' in the assigned features
-  ###
   # populate features appropriate to adversary type when user indicates >0 features to fill ----
   observeEvent(feat_obsvr(), {
     req(active_adv_ct_vec(),
@@ -475,10 +462,6 @@ server <- function(input, output, session) {
     col_fwk_ct <- adv_ct_vec()["Colossus_framework"]
     col_str_seg_ct <- adv_ct_vec()["Colossus_strong_segment"]
     col_avg_seg_ct <- adv_ct_vec()["Colossus_average_segment"]
-    
-    ###
-    ### TODO: LOOK INTO MERGING STRONG/AVERAGE SEGMENT CODE LOGIC...USING col_seg_names_by_fwk() ???
-    ###
     
     # note: choices begin with 'name' pasted at front to prevent 'initialization is empty' issue - sub() below removes this
     if (col_str_seg_ct > 0) {
@@ -626,7 +609,19 @@ server <- function(input, output, session) {
   
   # server Obsidian - ITS Theme panel ------------------------------------------
   
-  obsdn_mkdn <- reactive({0})
+  obsdn_mkdn <- reactive({
+    req(adv_runset())
+    
+    lapply(1:length(adv_runset()), \(i) {
+      if (grepl("Colossus", adv_runset()[i])) {
+        markdown_prep_adversary_col(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier,
+                                    fwk_id = colossus_fwk()[i], input$feat_fill_ct)
+      } else {
+        markdown_prep_adversary(input, a.t(adv_runset()[i]), a.n(adv_runset()[i]), input$tier, input$feat_fill_ct)
+      }
+    }) |> 
+      markdownize()
+  })
   
   # observeEvent(input$copy_obsdn_mkdn, {
   #   text <- "TEST FOR DEV"#processed_obsdn_mdkn()
@@ -634,27 +629,31 @@ server <- function(input, output, session) {
   #   session$sendCustomMessage("txt", input$copy_obsdn_mkdn)#text)
   # })
   
-  output$clpbrd_prvw <- renderText({input$copy_obsdn_mkdn})
-  
-  # server Credits panel -------------------------------------------------------
-  output$sources <- 
-    renderUI({
-      HTML(
-        paste0(
-          "<p>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
-          "<p>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>",
-          "<p>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed.</p>"
-          )
-        )
-    })
+  output$clpbrd_prvw <- renderText({obsdn_mkdn()})
   
   # server Features panel ------------------------------------------------------
+  output$feat_tbl_msg <- renderUI({
+    if (adv_total() == 0) {HTML("<div style = 'font-size: 18px;'><i>This tab will update with general-use and relevant selected-adversary/-tier features when you make selections in the 'Start' tab.</i></div>")}
+  })
+  
   feat_tbl <- reactive({
     tryCatch({select(feat_df(), -feat_detail_note)}, error = \(e) {data.frame()})
     })
   
   output$features_df <- 
     DT::renderDataTable(feat_tbl(), options = list(striped = TRUE, hover = TRUE))
+  
+  # server Credits panel -------------------------------------------------------
+  output$sources <- 
+    renderUI({
+      HTML(
+        paste0(
+          "<p style = 'font-size: 16px;'>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
+          "<p style = 'font-size: 16px;'>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>",
+          "<p style = 'font-size: 16px;'>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed.</p>"
+        )
+      )
+    })
 }
 
 # Run the application 
