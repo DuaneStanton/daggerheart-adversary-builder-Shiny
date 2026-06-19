@@ -3,7 +3,7 @@
 # function for processing features
 # version with -optional- text styling and features separated at end -----------
 
-list_features_obsdn <- function(inpt, typ, num, auto_feat_ct) {
+list_features_obsdn.dgrfrg <- function(inpt, typ, num, auto_feat_ct) {
   # list Passives, then Actions, then Reactions...if feature text present
   
   # auto_feat_ct just tracks input$feat_fill_ct ; this helps ensure the feature list updates if only the feature text changes
@@ -24,7 +24,8 @@ list_features_obsdn <- function(inpt, typ, num, auto_feat_ct) {
           what = rbind,
           args = lapply(1:length(feattypes_set()), \(z){
             data.frame(idx = z, typval = feattypes_set()[z],
-                       txt = process_feature(inpt, typ, num, z)  |> 
+                       txt = 
+                         process_feature(inpt, typ, num, z)  |> 
                          process_feat_txt_dtl(inpt = inpt, typ = typ, num = num)) })
         )
       x <- x[x$typval > 0,]
@@ -116,7 +117,7 @@ json_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]]),
     xp = inpt[[namify(typ, num, "exp")]],
     source = "custom",
-    features = list_features_obsdn(inpt, typ, num, auto_feat_ct)
+    features = list_features_obsdn.dgrfrg(inpt, typ, num, auto_feat_ct)
   )
 }
 
@@ -194,7 +195,7 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
     },
     xp = if (fwk) {inpt[[namify(typ, num, "exp")]]} else {"-"},
     source = "custom",
-    features = list_features_obsdn(inpt, typ, num, auto_feat_ct)
+    features = list_features_obsdn.dgrfrg(inpt, typ, num, auto_feat_ct)
   )
 }
 
