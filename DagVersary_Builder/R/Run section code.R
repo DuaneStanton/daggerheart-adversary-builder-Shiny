@@ -13,10 +13,6 @@ list_adv_desc <- function(inpt, typ, num) {
   paste0(ifelse(dsc == "","The most foul, cruel, and bad-tempered rodent you ever set eyes on", dsc))
 }
 
-###
-### TODO: FOR COLOSSAL ADVERSARIES, FILL NULL WITH DETAILS FOR Trogdor, the Burninator
-###
-
 list_motives_tactics <- function(inpt, typ, num) {
   mt1 <- inpt[[namify(typ, num, "mottac1")]]
   mt2 <- inpt[[namify(typ, num, "mottac2")]]
@@ -185,7 +181,7 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
 }
 
 # function to input designated adversary-specific feature text details ---------
-# note: designated-input structure MUST be of the form '<<{DETAIL TEXT}>>'
+# note: designated-input structure MUST be of the form '<<{DETAIL TEXT TO PROCESS}>>'
 
 # first: useful helper function for processing feature detail text
 # function to process the detail text and return the 'populate' value with bold HTML formatting ----
@@ -212,30 +208,26 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     } else if (grepl("minion_pasv", f_d_t)){"minion_pasv"
     } else if (grepl("perhp", f_d_t)){"horde_perhp"
     } else {stop(paste0("Error: check feat details and compare against prcs_nbr() function routing - input text was ", f_d_t))}
-  message("res: ", res)###
+  
   val_mod <- if (pls) {add_} else if (mns) {-sub_} else {0}
   
   # processing for tier-based detail
-  
   if (res == "tier") {
-    tier_ <- as.numeric(tier) * ifelse(mult, mult_, 1) + val_mod
-    tier_detail <- paste0("<b>", ceiling(tier_), "</b>")
+    tier_detail <- ceiling(as.numeric(tier) * ifelse(mult, mult_, 1) + val_mod)
   }
   
   if (res == "square_tier") {
-    tier_sq <- as.numeric(tier)^2 * ifelse(mult, mult_, 1) + val_mod
-    tier_detail <- paste0("<b>", ceiling(tier_sq), "</b>")
+    tier_detail <- ceiling(as.numeric(tier)^2 * ifelse(mult, mult_, 1) + val_mod)
   }
   
   if (res == "tierside_left") { # currently no 'tierside_right', but if added later: c(4, 6, 8, 10)[as.numeric(tier)]
     tier_dice_side <- c(8, 10, 12, 20)[as.numeric(tier)]
-    tier_detail <- paste0("<b>", tier_dice_side, "</b>")
+    tier_detail <- tier_dice_side
   }
   
   # processing for average damage-based detail
   if (res == "avg_dmg") {
-    avg_dmg_ <- ceiling(avg_dmg * ifelse(mult, mult_, 1)) + val_mod
-    avg_dmg_detail <- paste0("<b>", avg_dmg_, "</b>")
+    avg_dmg_detail <- ceiling(avg_dmg * ifelse(mult, mult_, 1)) + val_mod
   }
   
   # processing for dice-based detail
@@ -298,8 +290,8 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     
     dice_mod_txt <- if (dice_mod != 0){ifelse(dice_mod > 0, paste0("+", dice_mod), as.character(dice_mod))}
     
-    dice_detail <- paste0("<b>", dice_count, "d", dice_side, dice_mod_txt, "</b>")
-    dice_exp_dmg <- paste0("<b>", dice_exp_dmg, "</b>")
+    dice_detail <- paste0(dice_count, "d", dice_side, dice_mod_txt)
+    dice_exp_dmg <- dice_exp_dmg
   }
   
   if (res == "minion_pasv") {
@@ -317,6 +309,34 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
   } else if (res == "dice") {dice_detail
   } else if (res == "minion_pasv") {minion_passive_detail
   } else if (res == "horde_perhp") {horde_perhp_detail}
+}
+
+# function to locate number-driven feature detail text to wrap in bold
+embolden <- function(txt) {
+  txt_ <- txt
+  caret_strt_idx <- stri_locate_all(str = txt, regex = "[0-9]+d{0,1}[0-9]*\\+{0,1}[0-9]*|d[0-9]+")[[1]]
+  caret_end_idx <- stri_locate_all(str = txt, regex = "[0-9]+d{0,1}[0-9]*\\+{0,1}[0-9]*|d[0-9]+")[[1]]
+  
+  if (!all(is.na(caret_strt_idx))) {
+    caret_idx <- matrix(nrow = nrow(caret_strt_idx), ncol = 2, dimnames = list(NULL, c("start", "end")))
+    for (z in 1:nrow(caret_idx)) {
+      caret_idx[z,] <- c(caret_strt_idx[z, "start"], caret_end_idx[z, "end"])
+    }
+    
+    ptrns <- vapply(1:nrow(caret_idx), \(z) {
+      substring(txt, first = caret_idx[z, "start"], last = caret_idx[z, "end"])
+    }, character(1L))
+    
+    message("patterns:", paste(ptrns, collapse = "__"))###
+    
+    for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
+      stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
+        paste0("<b>", ptrns[z], "</b>")
+    }
+    
+    txt_
+  } else {txt}
+  
 }
 
 # 'main' feat processing function to replace <<DETAIL>> with desired adversary detail ----
@@ -347,9 +367,9 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
         prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_, minion_pasv, horde_perhp)
     }
     
-    txt_
+    embolden(txt_)
   } else {
-    txt
+    embolden(txt)
   }
 }
 
@@ -525,7 +545,6 @@ id_colossus_components <- function(inpt, adv_ct_vec, id = "grp") {
     
     }
   }
-
 
 list_motives_tactics_adjacent_sgmt <- function(inpt, typ, num) {
   mt1 <- inpt[[namify(typ, num, "mottac_adj1")]]
