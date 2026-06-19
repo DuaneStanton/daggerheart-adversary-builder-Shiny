@@ -8,13 +8,27 @@ adv_types <-
     "Colossus_framework", "Colossus_strong_segment", "Colossus_average_segment")
 tier_vals <- 1:4
 distances <- c("Melee", "Very Close", "Close", "Far", "Very Far")
+adv_type_detail <- 
+  c("Bruiser" = "Tough and deliver powerful attacks",
+    "Horde" = "Group of identical creatures acting together",
+    "Leader" = "Command and summon other adversaries",
+    "Minion" = "Easily dispatched but dangerous in numbers",
+    "Ranged" = "Fragile in close combat, but can attack from a distance for high damage",
+    "Skulk" = "Maneuver and exploit opportunities to ambush",
+    "Solo" = "A focal challenge to the party (may need a boost if no support, e.g. phases)",
+    "Standard" = "'Rank-and-file' adversary typical of their fictional group",
+    "Support" = "Enhance their allies and disrupt opponents",
+    "Social" = "Present unique challenges to overcome through conversation, not combat",
+    "Colossus_framework" = "'Core' of a huge adversary with multiple active parts",
+    "Colossus_strong_segment" = "Active part of a huge adversary - more HP and damage",
+    "Colossus_average_segment" = "Active part of a huge adversary - less HP and damage")
 
 # build adversary type count ---------------------------------------------------
 ###
 ### TODO: ADD TOOLTIP WITH BRIEF OVERVIEW OF TYPE???
 ###
 build_adv_count <- function(typ) {
-  tags$div(class = "adv-count-sel",
+  tags$div(class = "adv-count-sel", title = adv_type_detail[[typ]],
   numericInput(inputId = paste0(typ, "_count"), 
                label = paste0("# ", gsub("_", " ", typ), "s"),
                value = 0, min = 0, step = 1),
@@ -98,6 +112,24 @@ feat_ref_df <-
   do.call(what = rbind) |> 
   mutate(feat_type = factor(feat_type, levels = c("Passive", "Action", "Reaction"))) |> 
   arrange(adv_type, tier, feat_type, feat_name)
+
+# add some specific 'generally useful' features for reference in 'feature lookup' table even if not in adversary-specific set
+gen_feat_df <- 
+  data.frame(
+    adv_type = "general use",
+    feat_type = factor(c("Reaction", "Passive", "Passive", "Passive", "Passive", "Passive"), 
+                       levels = c("Passive", "Action", "Reaction")),
+    feat_name = c("Momentum", "Relentless (X)", "Slow", "Terrifying", "Wards", "Armor-clad"),
+    feat_text = c("When this adversary makes a successful attack against a PC, you gain a Fear.",
+                  "This adversary can be spotlighted up to X times per GM turn. Spend Fear as usual to spotlight them.",
+                  "When you spotlight this adversary and they don’t have a token on their stat block, they can’t act yet. Place a token on their stat block and describe what they’re preparing to do. When you spotlight this adversary and they have a token on their stat block clear the token and they can act.",
+                  "When this adversary makes a successful attack, all PCs within Close range lose a Hope and you gain a Fear.",
+                  "This adversary is resistant to magic damage.",
+                  "This adversary is resistant to physical damage.")
+  ) |> 
+  arrange(feat_type, feat_name)
+
+feat_ref_df <- full_join(gen_feat_df, feat_ref_df, by = intersect(colnames(gen_feat_df), colnames(feat_ref_df)))
 
 # useful for setting up/working with specific adversary's input vals
 namify <- function(type, num, detail){paste0(type, "_", num, "_", detail)}
