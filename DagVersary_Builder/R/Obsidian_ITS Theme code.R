@@ -41,8 +41,8 @@ list_features_obsdn.mkdn <- function(inpt, typ, num, auto_feat_ct) {
         lapply(1:length(x1), \(i) {
           # need to trim the <b><i> and </i></b> wrapper around the {Feature Name} - {Feature Type} text
           x <- x1[i]
-          x <- sub("<b>|</b>", "**", x)
-          x <- sub("<i>|</i>", "*", x)
+          x <- gsub("<b>|</b>", "**", x)
+          x <- gsub("<i>|</i>", "*", x)
           x <- gsub("\\&lt;", "<", x)
           x <- gsub("\\&gt;", ">", x)
           
@@ -195,8 +195,10 @@ markdown_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct
 }
 
 markdownize_features <- function(feat_list) {
-  lapply(1:length(feat_list), \(i) {paste0(">>- ", feat_list[[i]]) }) |> 
-    paste(collapse = "\n")
+  if (length(feat_list > 0L)) {
+    lapply(1:length(feat_list), \(i) {paste0(">>- ", feat_list[[i]]) }) |> 
+      paste(collapse = "\n")
+  } else {">>{no features specified}\n"}
 }
 
 # function to generate markdown structure for HP and Stress checkboxes
@@ -242,7 +244,7 @@ mkdnize_hp.stress <- function(hp, stress) {
       paste0("| ", hp_entry, " | ", stress_entry, " |")
     }, character(1L))
   
-  paste0(">> ", paste(hp_stress_row_set, "\n")) |> paste(collapse = " ")
+  paste0(">> ", paste0(hp_stress_row_set, "\n")) |> paste(collapse = "")
 }
 
 
@@ -256,17 +258,18 @@ markdownize <- function(adv_list) {
         ">> ### <font size='5'>", adv_list[[i]]$name, "</font> <font size='3'>(T", 
         adv_list[[i]]$tier, " ", adv_list[[i]]$type, ")</font>\n",
         ">> *", adv_list[[i]]$desc, "*\n",
-        ">>",
+        ">>\n",
         ">> | |<input type='checkbox' unchecked/> Hidden <input type='checkbox' unchecked/> Restrained <input type='checkbox' unchecked/> Vulnerable|\n",
         ">> |:-:|:-:|\n",
         ">> ||**Motives and Tactics:**<br>", adv_list[[i]]$motives, "|\n",
-        ">>",
+        ">>\n",
         ">> | Difficulty | Thresholds | ATK | ",  adv_list[[i]]$weaponName, ": ",  adv_list[[i]]$weaponRange, "|\n",
         ">> |:-:|:-:|:-:|:-:|\n",
         ">> |", adv_list[[i]]$difficulty, " | ", adv_list[[i]]$thresholdMajor, " / ", adv_list[[i]]$thresholdSevere, " | ",
         adv_list[[i]]$atk, " | ", adv_list[[i]]$weaponDamage, "|\n", 
         ">> ##### Resources\n",
         ">> | HP (", adv_list[[i]]$hp, ") | Stress (", adv_list[[i]]$stress, ")|\n",
+        ">> |:---:|:---:|\n",
         mkdnize_hp.stress(adv_list[[i]]$hp, adv_list[[i]]$stress),
         ">> **Experience:** ", adv_list[[i]]$xp, "\n",
         ">> ### Features\n", markdownize_features(adv_list[[i]]$features), "\n"
