@@ -327,8 +327,6 @@ embolden <- function(txt) {
       substring(txt, first = caret_idx[z, "start"], last = caret_idx[z, "end"])
     }, character(1L))
     
-    message("patterns:", paste(ptrns, collapse = "__"))###
-    
     for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
       stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
         paste0("<b>", ptrns[z], "</b>")
