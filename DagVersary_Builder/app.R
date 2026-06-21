@@ -153,6 +153,7 @@ ui <- fluidPage(
                ), 
       tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Download a text file from this tab to select all-copy-paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+               div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
                downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
                div(h4("The downloaded .txt file will look like the below:")),
                verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
@@ -384,7 +385,7 @@ server <- function(input, output, session) {
             feat_sampler_idx(adv_ct_, filter(feat_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct))
         
         for (j in 1:adv_ct_) { # per count within type
-          for (k in 1:as.numeric(input$feat_fill_ct)) {
+          for (k in 1:min(5, as.numeric(input$feat_fill_ct), nrow(filter(feat_df(), adv_type == adv_nm_)))) {
             update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
             }
           if (as.numeric(input$feat_fill_ct) < 5) {
