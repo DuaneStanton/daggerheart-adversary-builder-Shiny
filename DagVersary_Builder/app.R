@@ -177,7 +177,7 @@ server <- function(input, output, session) {
   })
 
   ### TODO:
-  ### - add validation checks
+  ### - add validation checks with more user-friendly error messages
   
   # server Start panel ---------------------------------------------------------
   output$adv_counts <- renderUI({
@@ -304,7 +304,7 @@ server <- function(input, output, session) {
   
   feat_df <- reactive({ # note: already sorted by type, then tier, then passive/action/reaction, then feat name
     req(active_adv_ct_vec()) # note: tier should only be NA for 'general use' features
-    filter(feat_ref_df, tier == input$tier | is.na(tier), adv_type %in% c("general use", names(active_adv_ct_vec())))
+    filter(feat_ref_df, tier == input$tier, adv_type %in% c("general_use", names(active_adv_ct_vec())))
   })
   
   horde_feat_df <- reactive({ # used for the -non- 'Horde (#)' features set
@@ -595,6 +595,7 @@ server <- function(input, output, session) {
   
   output$dgrfg_colossus_note <- 
     renderText({
+      req(adv_runset())
       if (any(grepl("Colossus", names(active_adv_ct_vec())))) {
         "<p style = 'color:blue'><b>Note: as of this app's build, Daggerforge doesn't currently have standalone 'Colossus framework/segment' category for filtering by adversary type; Colossi will be under Source = 'Custom' and '(col fw)' (framework) '(col sg)' (segment) is added to the adversary names.</b></p>"
       }
@@ -625,7 +626,10 @@ server <- function(input, output, session) {
     }
   )
   
-  output$mkdn_txt_dl_prvw <- renderText({markdown_file()})
+  output$mkdn_txt_dl_prvw <- renderText({
+    req(adv_runset())
+    markdown_file()
+    })
   
   # server Features panel ------------------------------------------------------
   output$feat_tbl_msg <- renderUI({
@@ -633,20 +637,21 @@ server <- function(input, output, session) {
   })
   
   feat_tbl <- reactive({
-    tryCatch({select(feat_df(), -feat_detail_note)}, error = \(e) {data.frame()})
+    req(adv_runset())
+    tryCatch({feat_df()}, error = \(e) {data.frame()})
     })
   
   output$features_df <- 
-    DT::renderDT(feat_tbl(), options = list(striped = TRUE, hover = TRUE))
+    DT::renderDT(feat_tbl(), options = list(striped = TRUE, hover = TRUE), rownames = FALSE)
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
     renderUI({
       HTML(
         paste0(
-          "<p style = 'font-size: 16px;'>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
-          "<p style = 'font-size: 16px;'>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google doc</p>",
-          "<p style = 'font-size: 16px;'>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed.</p>"
+          "<p style = 'font-size: 17px;'>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
+          "<p style = 'font-size: 17px;'>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google Doc</p>",
+          "<p style = 'font-size: 17px;'>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed</p>"
         )
       )
     })
