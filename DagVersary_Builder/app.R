@@ -24,7 +24,7 @@ ui <- fluidPage(
     tags$head(tags$style("
     .container-fluid { background-color: #d3c0d3; }
     .nav { 
-      background-color: #463146;
+      background-color: #53386b;
       border-radius: 10px;
     }
     .adv-count-sel { width: 100px; }
@@ -94,10 +94,17 @@ ui <- fluidPage(
       color: #e0c34c;
       font-size: 18px;
     }
-    #copy_obsdn_mkdn {
+    #markdown_dl {
       background-color: #53386b;
-      color: #e0c34c;
       border-color: #320e45;
+      color: #e0c34c;
+      font-size: 18px;
+    }
+    table.dataTable.display tbody tr.odd { 
+      background-color: #f7e9ab;
+    }
+    table.dataTable.display tbody tr.even { 
+      background-color: #dbd2a7;
     }
     ")),
     htmlOutput("use_note"),
@@ -138,25 +145,17 @@ ui <- fluidPage(
                #textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
                ), 
       tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Download JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
+               div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
                htmlOutput("dgrfg_colossus_note"),
                downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
                div(h4("The downloaded .json will look like the below:")),
                verbatimTextOutput(outputId = "json_dl_prvw")
                ), 
-      ### OPTIONAL COPYABLE TEXT FOR RUNNING IN OBSIDIAN - INCLUDE CLICK-TO-COPY BUTTON
       tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Copy from this tab to paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
-               fluidRow("WORK IN PROGRESS"),
-               ###
-               ### ACTIONBUTTON CURRENTLY NOT WORKING - START WITH 'PREVIEW' FIELD AND REVISIT THIS WHEN DONE
-               ###
-    #            actionButton("copy_obsdn_mkdn", 
-    #                         label = "Copy Obsidian ITS Theme Markdown to clipboard",
-    #                         onclick = "
-    # txt = document.getElementById('clpbrd_prvw').textContent;
-    # navigator.clipboard.writeText(txt);"),
-               verbatimTextOutput(outputId = "clpbrd_prvw")
+               div(h4("Download a text file from this tab to select all-copy-paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+               downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
+               div(h4("The downloaded .txt file will look like the below:")),
+               verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
                ),
       tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Lookup table of features for adversaries")),
@@ -177,9 +176,7 @@ server <- function(input, output, session) {
   })
 
   ### TODO:
-  ### - work out Obsidian-friendly copy-able formatted tab (LIKELY FUNCTION)
   ### - add validation checks
-  ### - work on aesthetics (hope & fear, baby!)
   
   # server Start panel ---------------------------------------------------------
   output$adv_counts <- renderUI({
@@ -570,11 +567,6 @@ server <- function(input, output, session) {
   #output$RUNCHECK <- renderText(paste(stress_0_adv(), collapse = " / "))
   
   # server Obsidian - Daggerforge panel ----------------------------------------
-  
-  ###
-  ### TODO json_file does not update feature list set for export UNLESS at least one other detail changes...need to correct this
-  ###
-  
   json_file <- reactive({
     req(adv_runset())
     
@@ -598,7 +590,7 @@ server <- function(input, output, session) {
     }
   )
   
-  output$json_dl_prvw <- renderText({json_file()})#renderPrint({cat(json_file())})
+  output$json_dl_prvw <- renderText({json_file()})
   
   output$dgrfg_colossus_note <- 
     renderText({
@@ -609,7 +601,7 @@ server <- function(input, output, session) {
   
   # server Obsidian - ITS Theme panel ------------------------------------------
   
-  obsdn_mkdn <- reactive({
+  markdown_file <- reactive({
     req(adv_runset())
     
     lapply(1:length(adv_runset()), \(i) {
@@ -623,13 +615,16 @@ server <- function(input, output, session) {
       markdownize()
   })
   
-  # observeEvent(input$copy_obsdn_mkdn, {
-  #   text <- "TEST FOR DEV"#processed_obsdn_mdkn()
-  #   obsdn_mkdn_2 <- obsdn_mkdn() + 1
-  #   session$sendCustomMessage("txt", input$copy_obsdn_mkdn)#text)
-  # })
+  output$markdown_dl <- downloadHandler(
+    filename = function() {
+      paste0("obsidian_markdown_dagversary-", format(Sys.time(), "%d-%b-%Y %Hh %Mm %Z"), ".txt")
+    },
+    content = function(file) {
+      cat(markdown_file(), file = file)
+    }
+  )
   
-  output$clpbrd_prvw <- renderText({obsdn_mkdn()})
+  output$mkdn_txt_dl_prvw <- renderText({markdown_file()})
   
   # server Features panel ------------------------------------------------------
   output$feat_tbl_msg <- renderUI({
@@ -641,7 +636,7 @@ server <- function(input, output, session) {
     })
   
   output$features_df <- 
-    DT::renderDataTable(feat_tbl(), options = list(striped = TRUE, hover = TRUE))
+    DT::renderDT(feat_tbl(), options = list(striped = TRUE, hover = TRUE))
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
@@ -654,6 +649,7 @@ server <- function(input, output, session) {
         )
       )
     })
+  
 }
 
 # Run the application 
