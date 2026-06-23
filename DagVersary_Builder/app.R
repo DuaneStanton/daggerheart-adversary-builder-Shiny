@@ -134,6 +134,7 @@ ui <- fluidPage(
                ),
       tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
+               div("See notes below the feature reference table in the 'Feature Table' tab if you'd like to include adversary-specific details in your features."),
                htmlOutput("dmg_note"),
                div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
                    selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
@@ -161,7 +162,9 @@ ui <- fluidPage(
       tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Lookup table of features for adversaries")),
                div(uiOutput("feat_tbl_msg")),
-               div(dataTableOutput("features_df"))
+               div(dataTableOutput("features_df")),
+               div(h4("Notes for dynamic feature details")),
+               htmlOutput("dynam_feat_notes")
                ),
     tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
              htmlOutput("sources")
@@ -643,6 +646,43 @@ server <- function(input, output, session) {
   
   output$features_df <- 
     DT::renderDT(feat_tbl(), options = list(striped = TRUE, hover = TRUE), rownames = FALSE)
+  
+  output$dynam_feat_notes <- renderUI({
+    HTML(paste0("<div style = 'font-size: 15px;'>",
+      "You can have adversary-specific details in the features you provide that this app will update. This works for the feature name and feature detail text fields, though generally it's meant for the feature detail text. Note that the 'dynamic' text must be within the &lt;&lt; &gt;&gt; 'double less than / double greater than' characters to work.<br>",
+      "<br>",
+      "Options currently supported are:<br>",
+      "<br>",
+      "&lt;&lt;tier&gt;&gt; : the tier number specified on the Start tab (can be useful for adversary-summoning details, number of attacks, or damage modifiers), ",
+      "e.g. <i>Spend a Fear to make &lt;&lt;tier&gt;&gt; standard attacks against the basket of cute something-or-others you introduced as a Chekhov's Emotionally Damaging Event plot device. Then take a good hard look in the mirror and think about what you've done.</i><br>",
+      "<br>",
+      "&lt;&lt;exp_dmg&gt;&gt; : the expected value/average of the adversary's standard attack damage - the expected value of the 'Dice damage' or the 'Avg damage' number depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
+      "<br>",
+      "&lt;&lt;dmg&gt;&gt; : either the 'Dice damage' detail (e.g. '1d6+2') or the 'Avg damage' number (e.g. '5') depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
+      "<br>",
+      "&lt;&lt;square_tier&gt;&gt; : the square of the tier number (can be useful for damage modifiers)<br>",
+      "<br>",
+      "&lt;&lt;tierside_left&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [8, 10, 12, 20] (can be useful for higher-damage attacks), ",
+      "e.g. <i>Spend a Fear to divide by zero - mortals within Close range must succeed on a Knowledge Reaction Roll or take 3d&lt;&lt;tierside_left&gt;&gt; magic damage.</i><br>",
+      "<br>",
+      "&lt;&lt;tierside_right&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [4, 6, 8, 10] (can be used for lower-damage attacks, though '0.5x dmg' or similar may make more sense)<br>",
+      "<br>",
+      "&lt;&lt;minion_pasv&gt;&gt; : plug in the 'Minion passive' value (only works for Minions, and only really used for the <i>Minion (#)</i> Passive feature<br>",
+      "<br>",
+      "&lt;&lt;perhp&gt;&gt; : plug in the '{# Horde creatures per HP}' value (only works for Hordes, and only really used for the <i>Contains Multitudes</i> Passive feature<br>",
+      "<br>",
+      "Advanced functionality:<br>",
+      "You can modify details to multiply the dynamic value (use a positive number less than 1 to divide) or add to/subtract from the value; ",
+      "the following example doubles the dice damage value and adds 3 to the value (e.g. 1d6+2 becomes 2d6+5)<br>",
+      "<br>",
+      "<i>Mark a Stress and make a standard attack against a target within range. On a success, the target takes &lt;&lt;2x dmg +3&gt;&gt; physical damage.</i><br>",
+      "<br>",
+      "This app's code is meant for dice damage multipliers around 0.5 (half damage) to 3 (triple damage) - going beyond that range may not work, and there's a lower limit of 1d4.<br>",
+      "Modified 'Dice damage' details will try to calculate the combination of dice side and number of dice that has an expected value matching (or closest to) the multiplier/addition change - for example, if the 'Dice damage' detail is 3d10+4 (expected value: 20.5) and your feature includes &lt;&lt;1.5x dmg&gt;&gt;, the app will use 3d20-1 (expected value: 31.5; to keep the app from bogging down only a few addition/subtraction values are considered).",
+      "</div>"
+      )
+    )
+  })
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
