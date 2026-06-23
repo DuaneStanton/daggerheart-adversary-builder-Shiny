@@ -200,6 +200,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     if (grepl("tier", f_d_t)) {
       if (grepl("square_tier", f_d_t)) {"square_tier"
       } else if (grepl("tierside_left", f_d_t)){"tierside_left"
+      } else if (grepl("tierside_right", f_d_t)){"tierside_right"
       } else {"tier"}
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
@@ -220,8 +221,13 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     tier_detail <- ceiling(as.numeric(tier)^2 * ifelse(mult, mult_, 1) + val_mod)
   }
   
-  if (res == "tierside_left") { # currently no 'tierside_right', but if added later: c(4, 6, 8, 10)[as.numeric(tier)]
+  if (res == "tierside_left") { 
     tier_dice_side <- c(8, 10, 12, 20)[as.numeric(tier)]
+    tier_detail <- tier_dice_side
+  }
+  
+  if (res == "tierside_right") {  
+    tier_dice_side <- c(4, 6, 8, 10)[as.numeric(tier)]
     tier_detail <- tier_dice_side
   }
   
@@ -259,7 +265,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     } else if (mult && mult_ > 1) { 
       dice_eval_chk <- expand.grid(side = dice_sides[dice_sides >= dice_sd],
                                    count = dice_ct + c(0, 1, 2),
-                                   dice_mod = c(0, dice_md, dice_md * mult_))
+                                   dice_mod = unique(c(-dice_md, -1, 0, 1, dice_md)))
       
       dice_eval_chk$val <-
         dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
@@ -272,7 +278,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     } else if (mult && mult_ < 1) {
       dice_eval_chk <- expand.grid(side = dice_sides[dice_sides <= dice_sd],
                                    count = (dice_ct - c(0, 1, 2))[(dice_ct - c(0, 1, 2)) >= 1],
-                                   dice_mod = c(0, dice_md, dice_md * mult_))
+                                   dice_mod = unique(c(-dice_md, -1, 0, 1, dice_md)))
       
       dice_eval_chk$val <-
         dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
