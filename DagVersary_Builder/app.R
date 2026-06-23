@@ -134,6 +134,7 @@ ui <- fluidPage(
                ),
       tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Customize details for your adversaries below, then move to 'Run'")),
+               htmlOutput("reset_caution"),
                div("See notes below the feature reference table in the 'Feature Table' tab if you'd like to include adversary-specific details in your features."),
                htmlOutput("dmg_note"),
                div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
@@ -153,7 +154,7 @@ ui <- fluidPage(
                verbatimTextOutput(outputId = "json_dl_prvw")
                ), 
       tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Download a text file from this tab to select all-copy-paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+               div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
                div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
                downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
                div(h4("The downloaded .txt file will look like the below:")),
@@ -243,7 +244,7 @@ server <- function(input, output, session) {
     if (btl_pts_adv() > btl_pts_bdgt()) {
       "<p style ='color: red'><b><i>Current 'battle points' > your 'budget' - may be tougher than design intended</i></b></p>"
     } else if (sum(adv_ct_vec()) > 0 && any(grepl("Colossus", names(active_adv_ct_vec())))) {
-      "<p style = 'color: darkred; font-size: 18px;'><b><i>'battle points' budget is meant for non-Colossus-including encounters; a Colossus can be its own encounter. If adding other adversaries think of how they may interact with the Colossus.</i></b>"
+      "<p style = 'color: darkred; font-size: 18px;'><b><i>'battle points' budget is meant for non-Colossus-including encounters; a Colossus can be its own encounter. If adding other adversaries think of how they may interact with the Colossus.</i></b></p>"
     }
   })
   
@@ -273,10 +274,14 @@ server <- function(input, output, session) {
     } else {"none"}
   })
   
+  output$reset_caution <- renderText({
+    "<p style = 'color: darkred; font-size: 18px;'><i>Please note: If you go back to the 'Start' tab and change any settings, the app will update and you will lose details entered in this tab and the Run/Obsidian/Feature Table tabs.</i></p>"
+    })
+  
   output$dmg_note <- renderText({
     if (dmg_add() %in% c("+1d4", "+2")) {
-      paste("<h3>Because you specified adding", dmg_add(), 
-            "to damage rolls, the 'Run' and 'Obsidian' tabs will include that for each adversary</h3>")
+      paste("<h4>Because you specified adding", dmg_add(), 
+            "to damage rolls, the 'Run' and 'Obsidian' tabs will include that for each adversary</h4>")
     } else {""}
   })
   
