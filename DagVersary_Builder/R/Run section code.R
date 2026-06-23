@@ -309,7 +309,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
   }
   
   # payoff: processed output to plug in to the feature text
-  if (res %in% c("tier", "square_tier", "tierside_left")) {tier_detail
+  if (res %in% c("tier", "square_tier", "tierside_left", "tierside_right")) {tier_detail
   } else if (res == "avg_dmg") {avg_dmg_detail
   } else if (res == "exp_dmg") {dice_exp_dmg
   } else if (res == "dice") {dice_detail
