@@ -78,7 +78,7 @@ ui <- fluidPage(
       column-gap: 10px;
     }
     .bottom-aligned > div { flex-grow: 1; }
-    .inline label{ 
+    .inline label { 
       display: table-cell; 
       text-align: center; 
       vertical-align: middle;
@@ -143,8 +143,7 @@ ui <- fluidPage(
                ), 
       tabPanel(div("Run", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
-               div(uiOutput("adv_run")),
-               #textOutput("RUNCHECK")### REMOVE WHEN DONE TESTING
+               div(uiOutput("adv_run"))
                ), 
       tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
                div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
@@ -161,7 +160,7 @@ ui <- fluidPage(
                verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
                ),
       tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Lookup table of features for adversaries")),
+               div(h4("Lookup table of features for adversaries - customize as you see fit!")),
                div(uiOutput("feat_tbl_msg")),
                div(dataTableOutput("features_df")),
                div(h4("Notes for dynamic feature details")),
@@ -542,39 +541,6 @@ server <- function(input, output, session) {
       })
     })
   
-  # monitor Stress status and set 'Vulnerable' condition as appropriate --------
-  adv_w_stress <- reactive({ adv_runset()[!grepl("Colossus_.+_segment", adv_runset())] })
-  
-  ###
-  ### MAY NEED TO REVISE THIS IF KEEPING - INIT TRIGGERS VAPPLY ERROR
-  ###
-  # have_stress_0 <- reactive({
-  #     req(list(length(adv_w_stress()) > 0L,
-  #              input[[namify(a.t(adv_w_stress()[1]), a.n(adv_w_stress()[1]), "stress_run")]] >= 0))
-  #     vapply(1:length(adv_w_stress()), \(i) {
-  #       input[[namify(a.t(adv_w_stress()[i]), a.n(adv_w_stress()[i]), "stress_run")]] == 0
-  #       }, logical(1L))
-  #   })
-
-  #stress_0_adv <- reactive({ adv_w_stress()[have_stress_0()] })
-
-  ###
-  ### ALL STEPS DOWN TO HERE WORK...
-  ###
-  # observeEvent(stress_0_adv(), {
-  #   if (length(stress_0_adv()) > 0L) {
-  #     for (i in 1:length(stress_0_adv())) {
-  #       updateCheckboxGroupInput(
-  #         inputId = paste0(stress_0_adv()[i], "_conds"),
-  #         selected = unique(c(input[[namify(a.t(adv_w_stress()[i]), a.n(adv_w_stress()[i]), "stress_run")]],
-  #                             "Vulnerable"))
-  #       )
-  #     }
-  #   }
-  # })
-  
-  #output$RUNCHECK <- renderText(paste(stress_0_adv(), collapse = " / "))
-  
   # server Obsidian - Daggerforge panel ----------------------------------------
   json_file <- reactive({
     req(adv_runset())
@@ -659,7 +625,7 @@ server <- function(input, output, session) {
       "Options currently supported are:<br>",
       "<br>",
       "&lt;&lt;tier&gt;&gt; : the tier number specified on the Start tab (can be useful for adversary-summoning details, number of attacks, or damage modifiers), ",
-      "e.g. <i>Spend a Fear to make &lt;&lt;tier&gt;&gt; standard attacks against the basket of cute something-or-others you introduced as a Chekhov's Emotionally Damaging Event plot device. Then take a good hard look in the mirror and think about what you've done.</i><br>",
+      "e.g. <i>Spend a Fear to make &lt;&lt;tier&gt;&gt; standard attacks against the magical mystical MacGuffin to up the stakes.</i><br>",
       "<br>",
       "&lt;&lt;exp_dmg&gt;&gt; : the expected value/average of the adversary's standard attack damage - the expected value of the 'Dice damage' or the 'Avg damage' number depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
       "<br>",
@@ -668,22 +634,23 @@ server <- function(input, output, session) {
       "&lt;&lt;square_tier&gt;&gt; : the square of the tier number (can be useful for damage modifiers)<br>",
       "<br>",
       "&lt;&lt;tierside_left&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [8, 10, 12, 20] (can be useful for higher-damage attacks), ",
-      "e.g. <i>Spend a Fear to divide by zero - mortals within Close range must succeed on a Knowledge Reaction Roll or take 3d&lt;&lt;tierside_left&gt;&gt; magic damage.</i><br>",
+      "e.g. <i>Spend a Fear to rhyme a word with orange - mortals within Close range must succeed on a Knowledge Reaction Roll or take 3d&lt;&lt;tierside_left&gt;&gt; magic damage. And no, 'door hinge' doesn't count.</i><br>",
       "<br>",
       "&lt;&lt;tierside_right&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [4, 6, 8, 10] (can be used for lower-damage attacks, though '0.5x dmg' or similar may make more sense)<br>",
       "<br>",
-      "&lt;&lt;minion_pasv&gt;&gt; : plug in the 'Minion passive' value (only works for Minions, and only really used for the <i>Minion (#)</i> Passive feature<br>",
+      "&lt;&lt;minion_pasv&gt;&gt; : plug in the 'Minion passive' value (only works for Minions, and only really used for the <i>Minion (#)</i> Passive feature)<br>",
       "<br>",
-      "&lt;&lt;perhp&gt;&gt; : plug in the '{# Horde creatures per HP}' value (only works for Hordes, and only really used for the <i>Contains Multitudes</i> Passive feature<br>",
+      "&lt;&lt;perhp&gt;&gt; : plug in the '{# Horde creatures per HP}' value (only works for Hordes, and only really used for the <i>Contains Multitudes</i> Passive feature)<br>",
       "<br>",
-      "Advanced functionality:<br>",
-      "You can modify details to multiply the dynamic value (use a positive number less than 1 to divide) or add to/subtract from the value; ",
-      "the following example doubles the dice damage value and adds 3 to the value (e.g. 1d6+2 becomes 2d6+5)<br>",
+      "<b>Advanced functionality:</b><br>",
+      "You can modify details to multiply the dynamic value (use a positive number less than 1 to divide) or add to/subtract from the value (use whole numbers for any addition/subtraction); ",
+      "the following example doubles the dice damage value and adds 3 to the value (e.g. 1d6+2 becomes 2d6+5).<br>",
       "<br>",
       "<i>Mark a Stress and make a standard attack against a target within range. On a success, the target takes &lt;&lt;2x dmg +3&gt;&gt; physical damage.</i><br>",
       "<br>",
       "This app's code is meant for dice damage multipliers around 0.5 (half damage) to 3 (triple damage) - going beyond that range may not work, and there's a lower limit of 1d4.<br>",
-      "Modified 'Dice damage' details will try to calculate the combination of dice side and number of dice that has an expected value matching (or closest to) the multiplier/addition change - for example, if the 'Dice damage' detail is 3d10+4 (expected value: 20.5) and your feature includes &lt;&lt;1.5x dmg&gt;&gt;, the app will use 3d20-1 (expected value: 31.5; to keep the app from bogging down only a few addition/subtraction values are considered).",
+      "<br>",
+      "Modified 'Dice damage' details will try to calculate the combination of dice side and number of dice that has an expected value matching (or closest to) the multiplier/addition change - for example, if the 'Dice damage' detail is 3d10+4 (expected value: 20.5) and your feature includes &lt;&lt;1.5x dmg&gt;&gt;, the app will use 3d20-1 (expected value: 31.5; to keep the app from bogging down only a few addition/subtraction values are considered).<br><br>",
       "</div>"
       )
     )
