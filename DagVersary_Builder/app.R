@@ -661,7 +661,7 @@ server <- function(input, output, session) {
     renderUI({
       HTML(
         paste0(
-          "<p style = 'font-size: 17px;'>This website includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
+          "<p style = 'font-size: 17px;'>This application includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
           "<p style = 'font-size: 17px;'>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google Doc</p>",
           "<p style = 'font-size: 17px;'>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed</p>"
         )
