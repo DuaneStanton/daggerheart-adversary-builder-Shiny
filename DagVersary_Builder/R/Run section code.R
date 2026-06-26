@@ -161,7 +161,7 @@ process_feature <- function(inpt, typ, num, ftrnum) {
   
   feattyp <- reactive({
     if (has_feattxt(inpt, typ, num, ftrnum)) {
-      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ": ")
+      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ":")
     }
   })
   
@@ -171,7 +171,7 @@ process_feature <- function(inpt, typ, num, ftrnum) {
     }
   })
   
-  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), "</i></b>", feattxt())} else {""}
+  if (has_feattxt(inpt, typ, num, ftrnum)) {paste0(featnm(), feattyp(), "</i></b> ", feattxt())} else {""}
 }
 
 classify_feattyp <- function(inpt, typ, num, ftrnum) {
@@ -337,6 +337,10 @@ embolden <- function(txt) {
       stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
         paste0("<b>", ptrns[z], "</b>")
     }
+    
+    # need to ensure no cases of double-bolding from here + process_feat_txt - causes formatting issue in markdown
+    txt_ <- gsub("<b><b>", "<b>", txt_)
+    txt_ <- gsub("</b></b>", "</b>", txt_)
     
     txt_
   } else {txt}
