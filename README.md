@@ -13,42 +13,46 @@ The app has the following structure, organized by tab:
 ### Start
 Start here - specify the party size (if following the 'Battle Points' guidance from the core rules), the challenge type, and the count for each adversary type (including Colossi!)
 
-[PLACEHOLDER: IMAGE HERE OF START]
+![Start tab](./README_images/app_Start.png)
 
 ### Customize 
 Fill in details for your adversaries (name, motives & tactics, weapon name, experiences, features) and tweak the default values for HP/stress/damage (following RightKnighttoFight's guidelines - see "Credit" tab). Optionally, populate adversaries with randomly-generated Passive/Action/Reaction features that are sensible for that adversary type (also listed in the 'Feature Reference' tab)
 
 - ***Caution:** If you decide to go back to the 'Start' tab and change details, the 'Customize' tab will reset, potentially losing your previously-entered details.*
 
-[PLACEHOLDER: IMAGE HERE OF CUSTOMIZE]
+![Customize tab](./README_images/app_Customize.png)
 
 - ***BONUS:*** The app supports dynamic feature details that let you do things like scale a feature's damage dice or dice count with the tier you selected - there are notes with details on how to use that toward the bottom of the 'Feature Table' tab.
  
 ### Run 
 Optionally run your encounter from here! Basic conditions and messages for emptied-Stress and -HP adversaries help you keep track of things.
 
-[PLACEHOLDER: IMAGE HERE OF RUN]
+![Run tab](./README_images/app_Run.png)
 
 - This is more a 'bonus, potentially useful' feature than the main show - the next two tabs cover integration with Obsidian, which is probably a better program to use to run these adversaries - Obsidian is also a great note-taking app, so you'd be able to run adversaries in a given session's note rather than clicking between this program and your notes.
 
 ### Obsidian - Daggerforge
 Export a JSON file to your Downloads folder to upload and run your custom adversaries using the Daggerforge plugin in Obsidian.
 
-[PLACEHOLDER: IMAGE HERE OF OBS-DAG]
+![Obsidian - Daggerforge tab](./README_images/app_ObsdnDaggerforge.png)
+
+![Obsidian - Daggerforge example](./README_images/example_ObsidianDaggerforge.png)
   
 - Once you've set up your adversaries in the Customize tab, you can click the 'Download JSON file for Daggerforge' to send a JSON file to your Downloads folder - you can directly upload this into Daggerforge if you have that plugin set up. The tab also shows a preview of what the JSON file will look like below the button.
 
 ### Obsidian - ITS Theme Markdown
 Export a .txt file to your Downloads folder to copy-paste into your Obsidian vault with the ITS Theme plugin installed. While it _can_ also work in Obsidian without the plugin, the end result doesn't look great.
 
-[PLACEHOLDER: IMAGE HERE OF OBS-ITS]
+![Obsidian - ITS Theme tab](./README_images/app_OsbdnITSTheme.png)
+
+![Obsidian - ITS Theme example](./README_images/example_ObsidianITSTheme.png)
 
 - Again, this will work once you've set up adversaries in the Customize tab; technically once you have any adversaries selected in the Start tab, but key details will be empty - so not recommended to launch from there! As with the 'Daggerforge' tab there's a preview of the content below the download button, so you could select from there any copy into Obsidian if you wanted. I haven't figured out how ot get 'select all' to only select content in the window, so you may be scrolling for a while to highlight everything - it'll likely be faster for you to download the .txt file and then select-all > copy > paste from there. 
 
 ### Feature Table 
 See a listing of the available features per adversary (some are from the SRD, others are an attempt at 'generic but not boring' features that align with the adversary type), plus some 'general use' features you might consider copying into the 'Feature' fields for your adversaries. 'General use' features do *not* automatically populate the Feature listings as combinations of these can create overly-tough adversaries (e.g. resistance to both physical AND magic damage).
 
-[PLACEHOLDER: IMAGE HERE OF FEAT TAB]
+![Feature Table tab](./README_images/app_FeatureTable.png)
 
 - As mentioned above, this tab also has notes beneath the Feature Table on including feature details the app can work with to have dyanmic features that can update to reflect the adverary or tier's values. As an example a feature with "<<1.5x dmg +3>>" in the feature description will replace that text with the combination of dice {count}d{sides} and the +/- modifier that gives an expected value close (or matching!) one-and-a-half times (plus three) the expected value of the adversary's 'standard attack' damage dice. If you selected 'Use Avg' for that adversary to use a fixed number for that damage, the text will be replaced with the calculated value, rounded up to the nearest whole number.
 
