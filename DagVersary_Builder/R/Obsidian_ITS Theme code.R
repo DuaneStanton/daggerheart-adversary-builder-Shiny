@@ -337,7 +337,6 @@ markdownize <- function(adv_list) {
   
   paste0(
     ">[!multi-column]\n",
-    ">>[!infobox|background-purple wfull]+\n",
     paste(a_l, collapse = ">\n")
   ) 
 }
