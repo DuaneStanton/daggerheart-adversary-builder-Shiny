@@ -375,7 +375,7 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     tier_ <- inpt[["tier"]]
     dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average" OR "Custom"
     avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
-    cstm_dice <- input[[namify(typ, num, "cstm_dc")]]
+    cstm_dice <- inpt[[namify(typ, num, "cstm_dc")]]
 
     for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
       stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
