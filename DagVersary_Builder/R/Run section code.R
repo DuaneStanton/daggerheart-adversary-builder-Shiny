@@ -375,7 +375,7 @@ disembolden <- function(txt) {
     }
     
     gsub("xNB.x", "", txt_)
-  } else {txt}
+  } else {gsub("xNB.x", "", txt)}
 }
 
 # 'main' feat processing function to replace <<DETAIL>> with desired adversary detail ----
@@ -409,7 +409,7 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     
     txt_ |> embolden() |> disembolden()
   } else {
-    embolden(txt)
+    txt |> embolden() |> disembolden()
   }
 }
 
