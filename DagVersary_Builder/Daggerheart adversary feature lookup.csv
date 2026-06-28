@@ -5,6 +5,7 @@ general use,"1,2,3,4",Passive,Slow,"When you spotlight this adversary and they d
 general use,"1,2,3,4",Passive,Terrifying,"When this adversary makes a successful attack, all PCs within Close range lose a Hope and you gain a Fear."
 general use,"1,2,3,4",Passive,Wards,This adversary is resistant to magic damage.
 general use,"1,2,3,4",Passive,Armor-clad,This adversary is resistant to physical damage.
+general use,"1,2,3,4",Reaction,Not Even My Final Form,"When the {adversary} marks their last HP, replace them with the {adversary new form} and immediately spotlight them.  "
 Bruiser,"1,2,3,4",Passive,Slow,"When you spotlight the {adversary} and they don’t have a token on their stat block, they can’t act yet. Place a token on their stat block and describe what they’re preparing to do. When you spotlight the {adversary} and they have a token on their stat block, clear the token and they can act."
 Bruiser,"2,3,4",Passive,Ramp Up,"You must spend a Fear to spotlight the {adversary}. While spotlighted, they can make their standard attack against all targets within range."
 Bruiser,"3,4",Passive,Direct Blow,The {adversary}’s attacks deal direct damage.
