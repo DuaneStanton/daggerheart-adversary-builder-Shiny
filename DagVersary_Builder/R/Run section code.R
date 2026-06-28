@@ -206,10 +206,10 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, mini
       } else if (grepl("tierside_left", f_d_t)){"tierside_left"
       } else if (grepl("tierside_right", f_d_t)){"tierside_right"
       } else {"tier"}
-    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
-    } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
-    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Avg") {"exp_dmg"
-    } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Avg"){"dice"
+    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Average") {"avg_dmg"
+    } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Average") {"avg_dmg"
+    } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Average") {"exp_dmg"
+    } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Average"){"dice"
     } else if (grepl("minion_pasv", f_d_t)){"minion_pasv"
     } else if (grepl("perhp", f_d_t)){"horde_perhp"
     } else {stop(paste0("Error: check feat details and compare against prcs_nbr() function routing - input text was ", f_d_t))}
