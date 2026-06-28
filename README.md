@@ -1,5 +1,5 @@
 # DagVersary_Builder
-## Making it easier to make adversaries on the fly
+## Making it easier to make adversaries...and potentially run them
 This is a locally-hostable Shiny app to set up and run adversaries for the Daggerheart TTRPG; while it requires a version of R installed on your computer and a handful of R packages to run (see the 'Running this App Locally' section under the 'App Structure' section), once you have a copy of the program on your computer it's yours to use at your leisure. 
 
 Users can select how many of each type of adversary they want (including colossal adversaries!) on the 'Start' tab, head tp 'Customize' to add specific details (including auto-populate some features), then either run an encounter using the 'Run' tab (e.g. adjust HP/Stress/conditions) OR output the customized stat blocks in a template that will work with either the Daggerforge plugin (one tab) or the Obsidian (ITS Theme) (another tab) to run encounters there.
