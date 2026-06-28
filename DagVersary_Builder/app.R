@@ -180,7 +180,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   output$use_note <- renderText({
-    "<p>Custom adversary builder using <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credits</b> tab)</p>"
+    "<p>Custom adversary builder informed by <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credits</b> tab)</p>"
   })
 
   ### TODO:
