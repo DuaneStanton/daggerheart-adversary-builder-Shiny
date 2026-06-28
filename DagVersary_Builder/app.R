@@ -61,6 +61,10 @@ ui <- fluidPage(
       color: #320e45;
     }
     .shiny-html-output .shiny-bound-output { margin-right: 5px; }
+    .shiny-output-error {
+      font-size: 18px;
+      color: #d00dad;
+    }
     .form-control { background: #efefef }
     .selectize-input.full.has-items.has-options { background: #f2efce }
     .form-group {
@@ -186,16 +190,17 @@ server <- function(input, output, session) {
   output$adv_counts <- renderUI({
     lapply(seq_along(adv_types), \(i) { build_adv_count(typ = adv_types[i]) })
   })
-  
-  adv_rctv <- lapply(seq_along(adv_types), \(i) {
-    reactive({as.numeric(input[[paste0(adv_types[i], "_count")]])})
-  })
-  names(adv_rctv) <- adv_types
-  
+
   adv_ct_vec <- reactive({
-    req(adv_rctv[[1]]())
+    lapply(seq_along(adv_types), \(i) {
+      validate(need(
+        is.integer(input[[paste0(adv_types[i], "_count")]]) &&
+        input[[paste0(adv_types[i], "_count")]] >= 0,
+        paste0(adv_types[i], " count input must be a single non-negative whole number on 'Start' tab. Use '0' for none.")
+      ))
+    })
     v <- vapply(seq_along(adv_types), 
-                \(i){ as.numeric(input[[paste0(adv_types[i], "_count")]]) },
+                \(i){ input[[paste0(adv_types[i], "_count")]] },
                 numeric(1L))
     names(v) <- adv_types
     v
@@ -203,23 +208,22 @@ server <- function(input, output, session) {
   
   active_adv_ct_vec <- reactive({adv_ct_vec()[adv_ct_vec() > 0]})
   
-  adv_total <- reactive({
-    req(adv_rctv[[1]]())
-    sum(adv_ct_vec())
-    })
+  adv_total <- reactive({ sum(active_adv_ct_vec()) })
   
   output$adv_tally <- renderText({
     paste0("<p style ='color: blue'><b><i>Adversary total: ", adv_total(), "</i></b></p>")
   })
   
   btl_pts_adv <- reactive({
+    validate(need(is.integer(input$party_total) && input$party_total > 0, 
+                  "Party Total in 'Start' tab must be a positive whole number."))
     sum(
-      1 * floor(adv_rctv[["Minion"]]() / input$party_total),
-      1 * (adv_rctv[["Social"]]() + adv_rctv[["Standard"]]()),
-      2 * (adv_rctv[["Horde"]]() + adv_rctv[["Ranged"]]() + adv_rctv[["Skulk"]]() + adv_rctv[["Standard"]]()),
-      3 * adv_rctv[["Leader"]](),
-      4 * adv_rctv[["Bruiser"]](),
-      5 * adv_rctv[["Solo"]]()
+      1 * floor(adv_ct_vec()[["Minion"]] / input$party_total),
+      1 * (adv_ct_vec()[["Social"]] + adv_ct_vec()[["Standard"]]),
+      2 * (adv_ct_vec()[["Horde"]] + adv_ct_vec()[["Ranged"]] + adv_ct_vec()[["Skulk"]] + adv_ct_vec()[["Standard"]]),
+      3 * adv_ct_vec()[["Leader"]],
+      4 * adv_ct_vec()[["Bruiser"]],
+      5 * adv_ct_vec()[["Solo"]]
     )
   }) 
 
@@ -229,11 +233,11 @@ server <- function(input, output, session) {
       ifelse(input$fight_type == "Easier/shorter", -1, 0),
       ifelse(input$fight_type %in% c("Tougher (add +1d4 to adversary damage rolls)",
                                      "Tougher (add +2 to adversary damage rolls)") |
-               adv_rctv[["Solo"]]() > 1, 
+               adv_ct_vec()[["Solo"]] > 1, 
              -2, 0),
       ifelse(input$fight_type == "Regular (but adversary tier < party tier)", 1, 0),
       ifelse(
-        sum(adv_rctv[["Bruiser"]](), adv_rctv[["Horde"]](), adv_rctv[["Leader"]](), adv_rctv[["Solo"]]()) == 0L,
+        sum(adv_ct_vec()[["Bruiser"]], adv_ct_vec()[["Horde"]], adv_ct_vec()[["Leader"]], adv_ct_vec()[["Solo"]]) == 0L,
         1, 0),
       ifelse(input$fight_type == "Harder/longer", 2, 0)
     )
@@ -267,6 +271,32 @@ server <- function(input, output, session) {
   })
   
   # server Customize panel -----------------------------------------------------
+  # note: this validation check uses inputs defined further down
+  cstm_chk <- reactive({
+    req(adv_runset())
+    valid_customize_chk(input, adv_runset())
+  })
+  
+  
+  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec(), id = "grp")})
+  colossus_fwk <- reactive({id_colossus_components(input, adv_ct_vec(), id = "fwk")})
+  # id text for outputting adversaries in order, and for validation checks
+  adv_runset <- reactive({
+    req(active_adv_ct_vec())
+    non_colossi <- active_adv_ct_vec()[!grepl("Colossus", names(active_adv_ct_vec()))]
+    
+    c(
+      # Colossi first - plausibly focus of any scene they're in
+      if (length(colossus_groupset()) > 0L) {colossus_groupset()},
+      # then non-Colossi
+      if (length(non_colossi) > 0L) {
+        lapply(1:length(non_colossi), \(z) {
+          paste0(names(non_colossi)[z], "_", 1:(non_colossi[z]))
+        }) |> unlist(recursive = FALSE)
+      }
+    )
+  })
+  
   dmg_add <- reactive({
     if (input$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {"+1d4"
     } else if (input$fight_type == "Tougher (add +2 to adversary damage rolls)") {"+2"
@@ -454,9 +484,6 @@ server <- function(input, output, session) {
   })
   
   # organize Colossus elements by framework membership -------------------------
-  colossus_groupset <- reactive({id_colossus_components(input, adv_ct_vec(), id = "grp")})
-  colossus_fwk <- reactive({id_colossus_components(input, adv_ct_vec(), id = "fwk")})
-  
   # update colossus 'adjacent segments' names as the names are populated
   col_seg_names_by_fwk <- reactive({
     req(isTruthy(input[["Colossus_strong_segment_1_name"]]) || isTruthy(input[["Colossus_average_segment_1_name"]]))
@@ -500,26 +527,9 @@ server <- function(input, output, session) {
   
   
   # server Run panel -----------------------------------------------------------
-  # id text for outputting adversaries in order
-  adv_runset <- reactive({
-    req(active_adv_ct_vec())
-    non_colossi <- active_adv_ct_vec()[!grepl("Colossus", names(active_adv_ct_vec()))]
-    
-    c(
-    # Colossi first - plausibly focus of any scene they're in
-      if (length(colossus_groupset()) > 0L) {colossus_groupset()},
-    # then non-Colossi
-      if (length(non_colossi) > 0L) {
-        lapply(1:length(non_colossi), \(z) {
-          paste0(names(non_colossi)[z], "_", 1:(non_colossi[z]))
-        }) |> unlist(recursive = FALSE)
-      }
-    )
-  })
-  
   output$adv_run <- 
     renderUI({
-      req(adv_runset())
+      req(cstm_chk() == 0L)
       output <- tagList()
       
       lapply(1:length(adv_runset()), \(i) {
@@ -543,7 +553,7 @@ server <- function(input, output, session) {
   
   # server Obsidian - Daggerforge panel ----------------------------------------
   json_file <- reactive({
-    req(adv_runset())
+    req(cstm_chk() == 0L)
     
     lapply(1:length(adv_runset()), \(i) {
       if (grepl("Colossus", adv_runset()[i])) {
@@ -565,7 +575,7 @@ server <- function(input, output, session) {
     }
   )
   
-  output$json_dl_prvw <- renderText({json_file()})
+  output$json_dl_prvw <- renderText({ json_file() })
   
   output$dgrfg_colossus_note <- 
     renderText({
@@ -578,7 +588,7 @@ server <- function(input, output, session) {
   # server Obsidian - ITS Theme panel ------------------------------------------
   
   markdown_file <- reactive({
-    req(adv_runset())
+    req(cstm_chk() == 0L)
     
     lapply(1:length(adv_runset()), \(i) {
       if (grepl("Colossus", adv_runset()[i])) {
@@ -600,10 +610,7 @@ server <- function(input, output, session) {
     }
   )
   
-  output$mkdn_txt_dl_prvw <- renderText({
-    req(adv_runset())
-    markdown_file()
-    })
+  output$mkdn_txt_dl_prvw <- renderText({ markdown_file() })
   
   # server Features panel ------------------------------------------------------
   output$feat_tbl_msg <- renderUI({

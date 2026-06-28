@@ -33,16 +33,20 @@ list_stats_1 <- function(inpt, typ, num) {
     ifelse(inpt[[namify(typ, num, "atk")]] > -1,
            paste0("+", inpt[[namify(typ, num, "atk")]]),
            inpt[[namify(typ, num, "atk")]])
+
+  dmg_dice <-
+    if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
+    } else {inpt[[namify(typ, num, "dmg_dice")]]}
   
   dice_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-      paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+      paste(dmg_dice, "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-               inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+               inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
       paste0(dmg_str, (dmg_end + 2))
-    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    } else {dmg_dice}
   
   avg_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
@@ -56,7 +60,7 @@ list_stats_1 <- function(inpt, typ, num) {
            inpt[[namify(typ, num, "rng")]])
   
   wpn_txt <- 
-    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
     } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]])
   
   df_ <- reactive({
@@ -185,7 +189,7 @@ classify_feattyp <- function(inpt, typ, num, ftrnum) {
 
 # first: useful helper function for processing feature detail text
 # function to process the detail text and return the 'populate' value with bold HTML formatting ----
-prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NULL, horde_perhp = NULL) {
+prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, minion_pasv = NULL, horde_perhp = NULL) {
   f_d_t <- gsub("<<|>>", "", feat_det_txt)
   # note: {DETAIL TEXT} involving multiplication / addition / subtraction -always- has the below form
   # {#}x {#d#  for dice // # for average dmg // 'tier' for tier} -/+{#} ; may or may not have multiplier AND add/sub
@@ -205,7 +209,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("dmg", f_d_t) & dice_dmg_txt == "Use Avg") {"avg_dmg"
     } else if (grepl("exp_dmg", f_d_t) & dice_dmg_txt != "Use Avg") {"exp_dmg"
-    } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Average"){"dice"
+    } else if (grepl("dmg", f_d_t) & dice_dmg_txt != "Use Avg"){"dice"
     } else if (grepl("minion_pasv", f_d_t)){"minion_pasv"
     } else if (grepl("perhp", f_d_t)){"horde_perhp"
     } else {stop(paste0("Error: check feat details and compare against prcs_nbr() function routing - input text was ", f_d_t))}
@@ -238,6 +242,8 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, tier, minion_pasv = NU
   
   # processing for dice-based detail
   if (res %in% c("exp_dmg", "dice")) {
+    dice_dmg_txt <- ifelse(dice_dmg_txt == "Custom", custm_dice, dice_dmg_txt)
+    
     dice_ct <- sub("^.*([0-9]+)d[0-9]{1,2}.*$", "\\1", dice_dmg_txt) |> as.numeric()
     dice_sd <- sub("^.*[0-9]+d([0-9]{1,2}).*$", "\\1", dice_dmg_txt) |> as.numeric()
     dice_sign <- sub("^.*[0-9]+d[0-9]{1,2}\\s*(\\D+)[0-9]*$", "\\1", dice_dmg_txt)
@@ -367,12 +373,13 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
     horde_perhp <- if (typ == "Horde") {inpt[[namify(typ, num, "perhp")]]}
     
     tier_ <- inpt[["tier"]]
-    dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average"
+    dice_dmg <- inpt[[namify(typ, num, "dmg_dice")]] # note: -MAY- == "Use Average" OR "Custom"
     avg_dmg <- inpt[[namify(typ, num, "dmg_avg")]]
+    cstm_dice <- input[[namify(typ, num, "cstm_dc")]]
 
     for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
       stringi::stri_sub(txt_, from = caret_idx[z, "start"], to = caret_idx[z, "end"]) <- 
-        prcs_nbr(ptrns[z], dice_dmg, avg_dmg, tier_, minion_pasv, horde_perhp)
+        prcs_nbr(ptrns[z], dice_dmg, avg_dmg, cstm_dice, tier_, minion_pasv, horde_perhp)
     }
     
     embolden(txt_)
@@ -587,32 +594,34 @@ list_stats_sg <- function(inpt, typ, num) {
                               paste0("+", inpt[[namify(typ, num, "atk")]]),
                               inpt[[namify(typ, num, "atk")]])})
   
-  wpn_txt_lbl <- reactive({
-    paste0(ifelse(inpt[[namify(typ, num, "wpn")]] == "", "{weapon}", inpt[[namify(typ, num, "wpn")]]), ": ",
-           inpt[[namify(typ, num, "rng")]])})
-  
-  wpn_txt <- reactive({
-    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg()
-    } else {dice_dmg()}, inpt[[namify(typ, num, "dmg_typ")]])
-  })
-  
-  dice_dmg <- reactive({
-    if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-      paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
-    } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-               inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
-      paste0(dmg_str, (dmg_end + 2))
+  dmg_dice <-
+    if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
     } else {inpt[[namify(typ, num, "dmg_dice")]]}
-  })
   
-  avg_dmg <- reactive({
+  dice_dmg <- 
+    if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
+      paste(dmg_dice, "+1d4")
+    } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
+               inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
+      paste0(dmg_str, (dmg_end + 2))
+    } else {dmg_dice}
+  
+  avg_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
       paste(inpt[[namify(typ, num, "dmg_avg")]], "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)") {
       inpt[[namify(typ, num, "dmg_avg")]] + 2
     } else {inpt[[namify(typ, num, "dmg_avg")]]}
+  
+  wpn_txt_lbl <- reactive({
+    paste0(ifelse(inpt[[namify(typ, num, "wpn")]] == "", "{weapon}", inpt[[namify(typ, num, "wpn")]]), ": ",
+           inpt[[namify(typ, num, "rng")]])})
+  
+  wpn_txt <- reactive({
+    paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
+    } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]])
   })
   
   df_ <- reactive({

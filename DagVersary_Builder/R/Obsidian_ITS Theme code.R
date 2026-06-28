@@ -71,15 +71,19 @@ markdown_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
     if (any(!is.null(mot1), !is.null(mot2), !is.null(mot3))) {
       paste(mot1, mot2, mot3, sep = ", ") |> sub(pattern = ", $", replacement = "")} else {""}
   
+  dmg_dice <- 
+    if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
+    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+  
   dice_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-      paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+      paste(dmg_dice, "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-               inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+               inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
       paste0(dmg_str, (dmg_end + 2))
-    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    } else {dmg_dice}
   
   avg_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
@@ -107,7 +111,7 @@ markdown_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
                         "{weapon}", inpt[[namify(typ, num, "wpn")]]),
     weaponRange = inpt[[namify(typ, num, "rng")]],
     weaponDamage =
-      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]]),
     xp = inpt[[namify(typ, num, "exp")]],
     source = "custom",
@@ -140,16 +144,23 @@ markdown_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct
     mottac <- inpt[[namify(a.t(fwk_id), a.n(fwk_id), "name")]]
   }
   
+  dmg_dice <- 
+    if (fwk) {"-"
+    } else {
+      if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
+      } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    }
+  
   dice_dmg <- 
     if (fwk) {"-"} else {
       if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-        paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+        paste(dmg_dice, "+1d4")
       } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-                 inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-        dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-        dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+                 inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+        dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+        dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
         paste0(dmg_str, (dmg_end + 2))
-      } else {inpt[[namify(typ, num, "dmg_dice")]]}
+      } else {dmg_dice}
     }
   
   avg_dmg <- 
@@ -185,7 +196,7 @@ markdown_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct
     },
     weaponRange = if (fwk) {"-"} else {inpt[[namify(typ, num, "rng")]]},
     weaponDamage = if (fwk) {"-"} else {
-      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]])
     },
     xp = if (fwk) {inpt[[namify(typ, num, "exp")]]} else {"-"},
@@ -203,48 +214,93 @@ markdownize_features <- function(feat_list) {
 
 # function to generate markdown structure for HP and Stress checkboxes
 # note: a full row can have up to 6 checkboxes per HP / Stress column
-mkdnize_hp.stress <- function(hp, stress) {
-  hp_full_row_need <- hp %/% 6
-  hp_part_row_ct <- ifelse(6 * hp_full_row_need == hp, 0, hp - 6 * hp_full_row_need)
+mkdnize_hp.stress <- function(hp = NULL, stress = NULL) {
+  if (!is.null(hp)) {
+    hp_full_row_need <- hp %/% 6
+    hp_part_row_ct <- ifelse(6 * hp_full_row_need == hp, 0, hp - 6 * hp_full_row_need)
+    
+    hp_row_set <- lapply(1:(hp_full_row_need + as.numeric(hp_part_row_ct > 0)), \(i) {
+      if (i < hp_full_row_need + 1) {
+        paste(rep("<input type='checkbox' unchecked/>", 6), collapse = " ")
+      } else {
+        paste(rep("<input type='checkbox' unchecked/>", hp_part_row_ct), collapse = " ")
+      }
+    })
+  } else {hp_full_row_need <- hp_part_row_ct <- 0}
   
-  stress_full_row_need <- stress %/% 6
-  stress_part_row_ct <- ifelse(6 * stress_full_row_need == stress, 0, stress - 6 * stress_full_row_need)
+  if (!is.null(stress)) {
+    stress_full_row_need <- stress %/% 6
+    stress_part_row_ct <- ifelse(6 * stress_full_row_need == stress, 0, stress - 6 * stress_full_row_need)
+    
+    stress_row_set <- lapply(1:(stress_full_row_need + as.numeric(stress_part_row_ct > 0)), \(i) {
+      if (i < stress_full_row_need + 1) {
+        paste(rep("<input type='checkbox' unchecked/>", 6), collapse = " ")
+      } else {
+        paste(rep("<input type='checkbox' unchecked/>", stress_part_row_ct), collapse = " ")
+      }
+    })
+  } else {stress_full_row_need <- stress_part_row_ct <- 0}
   
   row_need <- max(hp_full_row_need + as.numeric(hp_part_row_ct > 0),
                   stress_full_row_need + as.numeric(stress_part_row_ct > 0))
   
-  hp_row_set <- lapply(1:(hp_full_row_need + as.numeric(hp_part_row_ct > 0)), \(i) {
-    if (i < hp_full_row_need + 1) {
-      paste(rep("<input type='checkbox' unchecked/>", 6), collapse = " ")
-    } else {
-      paste(rep("<input type='checkbox' unchecked/>", hp_part_row_ct), collapse = " ")
-    }
-  })
-  
-  stress_row_set <- lapply(1:(stress_full_row_need + as.numeric(stress_part_row_ct > 0)), \(i) {
-    if (i < stress_full_row_need + 1) {
-      paste(rep("<input type='checkbox' unchecked/>", 6), collapse = " ")
-    } else {
-      paste(rep("<input type='checkbox' unchecked/>", stress_part_row_ct), collapse = " ")
-    }
-  })
-  
-  hp_stress_row_set <- 
-    vapply(1:row_need, \(i) {
-      hp_entry <- 
-        if (i <= hp_full_row_need + as.numeric(hp_part_row_ct > 0)) { 
-          hp_row_set[[i]]
-        } else {" "}
-      
-      stress_entry <- 
-        if (i <= stress_full_row_need + as.numeric(stress_part_row_ct > 0)) { 
-          stress_row_set[[i]]
-        } else {" "}
-      
-      paste0("| ", hp_entry, " | ", stress_entry, " |")
-    }, character(1L))
-  
-  paste0(">> ", paste0(hp_stress_row_set, "\n")) |> paste(collapse = "")
+  if (!is.null(hp) & !is.null(stress)) { # most adversaries
+    hp_stress_row_set <- 
+      vapply(1:row_need, \(i) {
+        hp_entry <- 
+          if (i <= hp_full_row_need + as.numeric(hp_part_row_ct > 0)) { 
+            hp_row_set[[i]]
+          } else {" "}
+        
+        stress_entry <- 
+          if (i <= stress_full_row_need + as.numeric(stress_part_row_ct > 0)) { 
+            stress_row_set[[i]]
+          } else {" "}
+        
+        paste0("| ", hp_entry, " | ", stress_entry, " |")
+      }, character(1L))
+    
+    paste0(
+      ">> | HP (", hp, ") | Stress (", stress, ") |\n",
+      ">> |:---:|:---:|\n",
+      paste0(">> ", paste0(hp_stress_row_set, "\n")) |> paste(collapse = "")
+    )
+    
+  } else if (is.null(hp)) { # Colossus framework
+    stress_rowset <- 
+      vapply(1:row_need, \(i) {
+        stress_entry <- 
+          if (i <= stress_full_row_need + as.numeric(stress_part_row_ct > 0)) { 
+            stress_row_set[[i]]
+          } else {" "}
+        
+        paste0("| ", stress_entry, " |")
+      }, character(1L))
+    
+    paste0(
+      ">> | Stress (", stress, ") |\n",
+      ">> |:---:|\n",
+      paste0(">> ", paste0(stress_rowset, "\n")) |> paste(collapse = "")
+    )
+    
+  } else if (is.null(stress)) { # Colossus segment
+    hp_rowset <- 
+      vapply(1:row_need, \(i) {
+        hp_entry <- 
+          if (i <= hp_full_row_need + as.numeric(hp_part_row_ct > 0)) { 
+            hp_row_set[[i]]
+          } else {" "}
+        
+        paste0("| ", hp_entry, " |")
+      }, character(1L))
+    
+    paste0(
+      ">> | HP (", hp, ") |\n",
+      ">> |:---:|\n",
+      paste0(">> ", paste0(hp_rowset, "\n")) |> paste(collapse = "")
+    )
+    
+  }
 }
 
 
@@ -268,11 +324,14 @@ markdownize <- function(adv_list) {
         ">> |", adv_list[[i]]$difficulty, " | ", adv_list[[i]]$thresholdMajor, " / ", adv_list[[i]]$thresholdSevere, " | ",
         adv_list[[i]]$atk, " | ", adv_list[[i]]$weaponDamage, "|\n", 
         ">> ##### Resources\n",
-        ">> | HP (", adv_list[[i]]$hp, ") | Stress (", adv_list[[i]]$stress, ")|\n",
-        ">> |:---:|:---:|\n",
-        mkdnize_hp.stress(adv_list[[i]]$hp, adv_list[[i]]$stress),
+        # special case for Colossi: frameworks have only stress, segments have only HP
+        mkdnize_hp.stress(
+          hp = if (!grepl("framework", adv_list[[i]]$type)) {adv_list[[i]]$hp},
+          stress = if (!grepl("segment", adv_list[[i]]$type)) {adv_list[[i]]$stress}
+        ),
         ">> **Experience:** ", adv_list[[i]]$xp, "\n",
-        ">> ### Features\n", markdownize_features(adv_list[[i]]$features), "\n"
+        ">> ### Features\n", markdownize_features(adv_list[[i]]$features), 
+        if (length(adv_list[[i]]$features) > 0L) {"\n"}
       )
     })
   

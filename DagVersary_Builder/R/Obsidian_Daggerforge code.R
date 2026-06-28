@@ -77,15 +77,19 @@ json_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
     if (any(!is.null(mot1), !is.null(mot2), !is.null(mot3))) {
       paste(mot1, mot2, mot3, sep = ", ") |> sub(pattern = ", $", replacement = "")} else {""}
     
+  dmg_dice <- 
+    if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
+    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+  
   dice_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-      paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+      paste(dmg_dice, "+1d4")
     } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-               inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+               inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+      dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+      dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
       paste0(dmg_str, (dmg_end + 2))
-    } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    } else {dmg_dice}
   
   avg_dmg <- 
     if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
@@ -145,16 +149,23 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
     mottac <- inpt[[namify(a.t(fwk_id), a.n(fwk_id), "name")]]
   }
   
+  dmg_dice <- 
+    if (fwk) {"-"
+    } else {
+      if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
+      } else {inpt[[namify(typ, num, "dmg_dice")]]}
+    }
+  
   dice_dmg <- 
     if (fwk) {"-"} else {
       if (inpt$fight_type == "Tougher (add +1d4 to adversary damage rolls)") {
-        paste(inpt[[namify(typ, num, "dmg_dice")]], "+1d4")
+        paste(dmg_dice, "+1d4")
       } else if (inpt$fight_type == "Tougher (add +2 to adversary damage rolls)" &
-                 inpt[[namify(typ, num, "dmg_dice")]] != "Use Avg") {
-        dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", inpt[[namify(typ, num, "dmg_dice")]]) |> as.numeric()
-        dmg_str <- sub("(.+d\\d+\\+).+", "\\1", inpt[[namify(typ, num, "dmg_dice")]])
+                 inpt[[namify(typ, num, "dmg_dice")]] != "Use Average") {
+        dmg_end <- sub(".+d\\d+\\+(.+)", "\\1", dmg_dice) |> as.numeric()
+        dmg_str <- sub("(.+d\\d+\\+).+", "\\1", dmg_dice)
         paste0(dmg_str, (dmg_end + 2))
-      } else {inpt[[namify(typ, num, "dmg_dice")]]}
+      } else {dmg_dice}
     }
   
   avg_dmg <- 
@@ -190,7 +201,7 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
     },
     weaponRange = if (fwk) {"-"} else {inpt[[namify(typ, num, "rng")]]},
     weaponDamage = if (fwk) {"-"} else {
-      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]])
     },
     xp = if (fwk) {inpt[[namify(typ, num, "exp")]]} else {"-"},

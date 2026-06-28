@@ -25,7 +25,7 @@ dmg_dice_pooler <- function(df_, tier, type, nbr, detail) {
       style = "width: 120px;",
       selectInput(inputId = namify(type, nbr, detail),
                   label = "Damage dice",
-                  choices = c(unlist(df__$dice_pool_lst), "Use Avg")))
+                  choices = c(unlist(df__$dice_pool_lst), "Use Average", "Custom")))
 }
 
 feat_setup <- function(featname, featdtl = "", feattype, feattext) {
@@ -77,7 +77,14 @@ build_adv_spec_ui <- function(typ, num, tr) {
                  numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                  div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
       )),
-    textify(typ, num, "exp", "Experience(s) e.g. 'Conjurer of cheap tricks +2'", "350px"),
+    fluidRow(
+      column(width = 12, offset = 0,
+             div(class = "bottom-aligned",
+                 div(textify(typ, num, "exp", "Experience(s) e.g. 'Conjurer of cheap tricks +2'", "340px")),
+                 div(title = "This is only used if you select 'Custom' in the Damage dice selection above",
+                     textify(typ, num, "cstm_dc", "e.g. 2d20+1", "110px") ) )
+      )
+    ),
     featurize(typ, num, 1),
     featurize(typ, num, 2),
     featurize(typ, num, 3),
@@ -136,7 +143,10 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
         column(width = 12, offset = 0,
                div(class = "bottom-aligned",
                    div(numerify(stat_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
-                   div(title = "HP per each segment of this type", numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")) )
+                   div(title = "HP for this segment", numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
+                   div(style = "width: 170px;"),
+                   div(title = "This is only used if you select 'Custom' in the Damage dice selection below",
+                       textify(typ, num, "cstm_dc", "e.g. 2d20+1", "110px") ) )
         ))
     },
     if (grepl("framework", typ)) {textify(typ, num, "exp", "Experience(s) e.g. 'Burninator +2'", "350px")
@@ -205,3 +215,68 @@ feat_sampler_idx <- function(n_sametyp_adv, feat_df, n_feat) {
   feat_mat
 }
 
+# validation check for inputs --------------------------------------------------
+# functions for integer check with diagnostic message for end user if needed
+check_int <- function(inpt, adv_name, inpt_name, msg_inpt_name, min_val = NULL) {
+  ok <- 
+  if (is.null(min_val)) {
+    inpt[[paste0(adv_name, "_", inpt_name)]] %% 1 == 0
+  } else {
+    inpt[[paste0(adv_name, "_", inpt_name)]] %% 1 == 0 && 
+      inpt[[paste0(adv_name, "_", inpt_name)]] > min_val - 1
+  }
+  
+  ok_need_msg <- 
+    ifelse(!is.null(min_val) && min_val > 0, 
+           " must be a positive whole number", 
+           " must be a whole number")
+  
+  need(ok, paste0(msg_inpt_name, " for ", adv_name, ok_need_msg))
+  
+}
+
+valid_customize_chk <- function(inpt, adv_runset_vec) {
+  lapply(seq_along(adv_runset_vec), \(i) {
+    if (!grepl("framework|segment", adv_runset_vec[i])) {
+      validate(
+        check_int(inpt, adv_runset_vec[i], "diff", "Difficulty", 1),
+        check_int(inpt, adv_runset_vec[i], "thresh_maj", "Major Threshold", 1),
+        check_int(inpt, adv_runset_vec[i], "thresh_sev", "Severe Threshold", 1),
+        check_int(inpt, adv_runset_vec[i], "hp", "HP", 1),
+        check_int(inpt, adv_runset_vec[i], "stress", "Stress", 1),
+        check_int(inpt, adv_runset_vec[i], "atk", "ATK"),
+        need(inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] != "Use Average" ||
+               (inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] == "Use Average" &
+                  inpt[[paste0(adv_runset_vec[i], "_dmg_avg")]] %% 1 == 0 &&
+                  inpt[[paste0(adv_runset_vec[i], "_dmg_avg")]] > 0),
+             paste0("Average damage for ", adv_runset_vec[i], " must be a positive whole number")),
+        need(inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] != "Custom" ||
+               (inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] == "Custom" &&
+                  grepl("^[0-9]+d[0-9]+\\+{0,1}\\-{0,1}[0-9]*$", inpt[[paste0(adv_runset_vec[i], "_cstm_dc")]])),
+             paste0("Custom damage dice for ", adv_runset_vec[i], " must use the form {#}d{#} with optional +{#} or -{#} at the end and no spaces."))
+      )
+    } else if (grepl("framework", adv_runset_vec[i])) { # Colossus framework-specific validation
+      validate(
+        check_int(inpt, adv_runset_vec[i], "thresh_maj", "Major Threshold", 1),
+        check_int(inpt, adv_runset_vec[i], "thresh_sev", "Severe Threshold", 1),
+        check_int(inpt, adv_runset_vec[i], "stress", "Stress", 1)
+      )
+    } else if (grepl("segment", adv_runset_vec[i])) { # Colossus segment-specific validation
+      validate(
+        check_int(inpt, adv_runset_vec[i], "diff", "Difficulty", 1),
+        check_int(inpt, adv_runset_vec[i], "hp", "HP", 1),
+        check_int(inpt, adv_runset_vec[i], "atk", "ATK"),
+        need(inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] != "Use Average" ||
+               (inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] == "Use Average" &
+                  inpt[[paste0(adv_runset_vec[i], "_dmg_avg")]] %% 1 == 0 &&
+                  inpt[[paste0(adv_runset_vec[i], "_dmg_avg")]] > 0),
+             paste0("Average damage for ", adv_runset_vec[i], " must be a positive whole number")),
+        need(inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] != "Custom" ||
+               (inpt[[paste0(adv_runset_vec[i], "_dmg_dice")]] == "Custom" &&
+                  grepl("^[0-9]+d[0-9]+\\+{0,1}\\-{0,1}[0-9]*$", inpt[[paste0(adv_runset_vec[i], "_cstm_dc")]])),
+             paste0("Custom damage dice for ", adv_runset_vec[i], " must use the form {#}d{#} with optional +{#} or -{#} at the end and no spaces."))
+      )
+    }
+  })
+  0L
+}
