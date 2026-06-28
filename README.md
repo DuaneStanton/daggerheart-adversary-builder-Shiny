@@ -13,7 +13,7 @@ The app has the following structure, organized by tab:
 ### Start
 Start here - specify the party size (if following the 'Battle Points' guidance from the core rules), the challenge type, and the count for each adversary type (including Colossi!)
 
-![Start tab](https://github.com/DuaneStanton/daggerheart-adversary-builder-Shiny/blob/dev/README_images/app_Start.png)
+![Start tab](./README_images/app_Start.png)
 
 ### Customize 
 Fill in details for your adversaries (name, motives & tactics, weapon name, experiences, features) and tweak the default values for HP/stress/damage (following RightKnighttoFight's guidelines - see "Credit" tab). Optionally, populate adversaries with randomly-generated Passive/Action/Reaction features that are sensible for that adversary type (also listed in the 'Feature Reference' tab)
