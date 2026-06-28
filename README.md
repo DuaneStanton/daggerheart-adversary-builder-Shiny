@@ -35,6 +35,8 @@ Optionally run your encounter from here! Basic conditions and messages for empti
 Export a JSON file to your Downloads folder to upload and run your custom adversaries using the Daggerforge plugin in Obsidian.
 
 ![Obsidian - Daggerforge tab](./README_images/app_ObsdnDaggerforge.png)
+
+![Obsidian - Daggerforge example](./README_images/example_ObsidianDaggerforge.png)
   
 - Once you've set up your adversaries in the Customize tab, you can click the 'Download JSON file for Daggerforge' to send a JSON file to your Downloads folder - you can directly upload this into Daggerforge if you have that plugin set up. The tab also shows a preview of what the JSON file will look like below the button.
 
@@ -42,6 +44,8 @@ Export a JSON file to your Downloads folder to upload and run your custom advers
 Export a .txt file to your Downloads folder to copy-paste into your Obsidian vault with the ITS Theme plugin installed. While it _can_ also work in Obsidian without the plugin, the end result doesn't look great.
 
 ![Obsidian - ITS Theme tab](./README_images/app_OsbdnITSTheme.png)
+
+![Obsidian - ITS Theme example](./README_images/example_ObsidianITSTheme.png)
 
 - Again, this will work once you've set up adversaries in the Customize tab; technically once you have any adversaries selected in the Start tab, but key details will be empty - so not recommended to launch from there! As with the 'Daggerforge' tab there's a preview of the content below the download button, so you could select from there any copy into Obsidian if you wanted. I haven't figured out how ot get 'select all' to only select content in the window, so you may be scrolling for a while to highlight everything - it'll likely be faster for you to download the .txt file and then select-all > copy > paste from there. 
 
