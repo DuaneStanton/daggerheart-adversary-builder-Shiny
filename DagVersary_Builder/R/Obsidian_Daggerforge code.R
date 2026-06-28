@@ -117,7 +117,7 @@ json_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
                         "{weapon}", inpt[[namify(typ, num, "wpn")]]),
     weaponRange = inpt[[namify(typ, num, "rng")]],
     weaponDamage =
-      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Avg") {avg_dmg
+      paste(if (inpt[[namify(typ, num, "dmg_dice")]] == "Use Average") {avg_dmg
       } else {dice_dmg}, inpt[[namify(typ, num, "dmg_typ")]]),
     xp = inpt[[namify(typ, num, "exp")]],
     source = "custom",
