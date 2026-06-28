@@ -22,7 +22,7 @@ numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px
 dmg_dice_pooler <- function(df_, tier, type, nbr, detail) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
   div(title = "Select higher constant for more consistency, or high dice-side for more swinginess",
-      style = "width: 120px;",
+      style = "width: 130px;",
       selectInput(inputId = namify(type, nbr, detail),
                   label = "Damage dice",
                   choices = c(unlist(df__$dice_pool_lst), "Use Average", "Custom")))
@@ -72,7 +72,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
              div(class = "bottom-aligned",
                  div(numerify(stat_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
                  div(textify(typ, num, "wpn", "Weapon", "140px")),
-                 div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
+                 div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "120px")),
                  dmg_dice_pooler(stat_ref_df, tr, typ, num, "dmg_dice"),
                  numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                  div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) )
@@ -81,6 +81,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
       column(width = 12, offset = 0,
              div(class = "bottom-aligned",
                  div(textify(typ, num, "exp", "Experience(s) e.g. 'Conjurer of cheap tricks +2'", "340px")),
+                 div(style = "width: 2px;"),
                  div(title = "This is only used if you select 'Custom' in the Damage dice selection above",
                      textify(typ, num, "cstm_dc", "e.g. 2d20+1", "110px") ) )
       )
@@ -144,7 +145,7 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
                div(class = "bottom-aligned",
                    div(numerify(stat_ref_df, tr, typ, num, "diff", "Difficulty", "diff_md")),
                    div(title = "HP for this segment", numerify(stat_ref_df, tr, typ, num, "hp", "HP", "hp_md", "70px", "70px")),
-                   div(style = "width: 170px;"),
+                   div(style = "width: 180px;"),
                    div(title = "This is only used if you select 'Custom' in the Damage dice selection below",
                        textify(typ, num, "cstm_dc", "e.g. 2d20+1", "110px") ) )
         ))
@@ -156,7 +157,7 @@ build_colossus_spec_ui <- function(typ, num, tr, multi_frame = FALSE) {
                div(class = "bottom-aligned",
                    div(numerify(stat_ref_df, tr, typ, num, "atk", "ATK", "atk_md", "70px", "70px")),
                    div(textify(typ, num, "wpn", "Weapon", "140px")),
-                   div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "110px")),
+                   div(selectInput(namify(typ, num, "rng"), label = "Weapon range", choices = distances, width = "120px")),
                    dmg_dice_pooler(stat_ref_df, tr, typ, num, "dmg_dice"),
                    numerify(stat_ref_df, tr, typ, num, "dmg_avg", "Avg damage", "dmg_avg_md", "100px", "120px"),
                    div(selectInput(namify(typ, num, "dmg_typ"), label = "Damage type", choices = c("phy", "mag", "phy & mag", "direct"), width = "120px")) ))
