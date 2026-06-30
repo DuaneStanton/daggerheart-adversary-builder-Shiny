@@ -669,7 +669,7 @@ server <- function(input, output, session) {
       HTML(
         paste0(
           "<p style = 'font-size: 17px;'>This application includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.</p>",
-          "<p style = 'font-size: 17px;'>Suggested adversary stats come from the <a href='https://docs.google.com/document/d/12g-obIkdGJ_iLL19bS0oKPDDvPbPI9pWUiFqGw8ED88/edit?tab=t.0#heading=h.mdjo15f06zjv' target='_blank'>RightKnighttoFight’s Guide to Making Custom Adversaries v1.6</a> Google Doc</p>",
+          "<p style = 'font-size: 17px;'>Suggested adversary stats come from the RightKnight’s Guide to Making Custom Adversaries; available on <a href='https://heartofdaggers.com/products/making-custom-adversaries/' target='_blank'>Heart of Daggers</a> and <a href='https://www.drivethrurpg.com/en/product/526778/making-custom-adversaries-a-guide?__cf_chl_f_tk=ieOvKuTJrRapON6U4kOB1Gn4gYAdWN80uQwjmWvzF_0-1782857279-1.0.1.1-w3Fy.GazDAVKmT4.G5scrIpi9bRSP63GRn0h1VDiE0M' target='_blank'>Drive Thru RPG</a>",
           "<p style = 'font-size: 17px;'>Horde feature 'Contains Multitudes' and Minion feature 'Join or Die' heavily inspired by a post by Reddit user ThatZeroRed</p>"
         )
       )
