@@ -241,8 +241,6 @@ valid_customize_chk <- function(inpt, adv_runset_vec) {
     if (!grepl("framework|segment", adv_runset_vec[i])) {
       validate(
         check_int(inpt, adv_runset_vec[i], "diff", "Difficulty", 1),
-        check_int(inpt, adv_runset_vec[i], "thresh_maj", "Major Threshold", 1),
-        check_int(inpt, adv_runset_vec[i], "thresh_sev", "Severe Threshold", 1),
         check_int(inpt, adv_runset_vec[i], "hp", "HP", 1),
         check_int(inpt, adv_runset_vec[i], "stress", "Stress", 1),
         check_int(inpt, adv_runset_vec[i], "atk", "ATK"),
@@ -258,8 +256,6 @@ valid_customize_chk <- function(inpt, adv_runset_vec) {
       )
     } else if (grepl("framework", adv_runset_vec[i])) { # Colossus framework-specific validation
       validate(
-        check_int(inpt, adv_runset_vec[i], "thresh_maj", "Major Threshold", 1),
-        check_int(inpt, adv_runset_vec[i], "thresh_sev", "Severe Threshold", 1),
         check_int(inpt, adv_runset_vec[i], "stress", "Stress", 1)
       )
     } else if (grepl("segment", adv_runset_vec[i])) { # Colossus segment-specific validation
@@ -278,6 +274,14 @@ valid_customize_chk <- function(inpt, adv_runset_vec) {
              paste0("Custom damage dice for ", adv_runset_vec[i], " must use the form {#}d{#} with optional +{#} or -{#} at the end and no spaces."))
       )
     }
+    
+    if (!grepl("Minion|segment", adv_runset_vec[i])) { # Minions and Colossus segments don't have Thresholds
+      validate(
+        check_int(inpt, adv_runset_vec[i], "thresh_maj", "Major Threshold", 1),
+        check_int(inpt, adv_runset_vec[i], "thresh_sev", "Severe Threshold", 1)
+      )
+    }
+    
   })
   0L
 }
