@@ -43,7 +43,7 @@ Export a JSON file to your Downloads folder to upload and run your custom advers
 ### Obsidian - ITS Theme Markdown
 Export a .txt file to your Downloads folder to copy-paste into your Obsidian vault with the ITS Theme plugin installed. While it _can_ also work in Obsidian without the plugin, the end result doesn't look great.
 
-![Obsidian - ITS Theme tab](./README_images/app_OsbdnITSTheme.png)
+![Obsidian - ITS Theme tab](./README_images/app_ObsdnITSTheme.png)
 
 ![Obsidian - ITS Theme example](./README_images/example_ObsidianITSTheme.png)
 
