@@ -154,7 +154,7 @@ has_feattxt <- function(inpt, typ, num, ftrnum) {
   inpt[[namify(typ, num, paste0("feattext_", ftrnum))]] != ""
 }
 
-process_feature <- function(inpt, typ, num, ftrnum, mark_nobold = TRUE) {
+process_feature <- function(inpt, typ, num, ftrnum, mark_nobold = FALSE) {
   featnm <- reactive({
     if (has_feattxt(inpt, typ, num, ftrnum)) {
       ifelse(inpt[[namify(typ, num, paste0("featname_", ftrnum))]] == "", 
@@ -326,15 +326,19 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, mini
 # function to locate number-driven feature detail text to wrap in bold
 embolden <- function(txt) {
   txt_ <- txt
-  nbr_strt_idx <- stri_locate_all(str = txt, regex = "[0-9]+d{0,1}[0-9]*\\+{0,1}[0-9]*|d[0-9]+")[[1]]
-  nbr_end_idx <- stri_locate_all(str = txt, regex = "[0-9]+d{0,1}[0-9]*\\+{0,1}[0-9]*|d[0-9]+")[[1]]
+  nbr_idx.0 <- stri_locate_all(str = txt, regex = "[0-9]+d{0,1}[0-9]*\\+{0,1}[0-9]*|d[0-9]+")[[1]]
   
-  if (!all(is.na(nbr_strt_idx))) {
-    nbr_idx <- matrix(nrow = nrow(nbr_strt_idx), ncol = 2, dimnames = list(NULL, c("start", "end")))
-    for (z in 1:nrow(nbr_idx)) {
-      nbr_idx[z,] <- c(nbr_strt_idx[z, "start"], nbr_end_idx[z, "end"])
-    }
-    
+  # special case: don't add bold formatting within {feature name} detail - already bolded along with {eature type}
+  feat_start_idx <- stri_locate_all(str = txt, regex = "- Passive:|- Action:|- Reaction:")[[1]]
+  
+  if (!all(is.na(feat_start_idx))) {
+    if (!all(is.na(nbr_idx.0))) {
+      nbr_idx <- nbr_idx.0[nbr_idx.0[, 1] > max(feat_start_idx[, 2]), ] |> matrix(ncol = 2)
+      colnames(nbr_idx) <- c("start", "end")
+    } else {nbr_idx <- NA}
+  }
+  
+  if (!all(is.na(nbr_idx))) {
     ptrns <- vapply(1:nrow(nbr_idx), \(z) {
       substring(txt, first = nbr_idx[z, "start"], last = nbr_idx[z, "end"])
     }, character(1L))
@@ -351,31 +355,6 @@ embolden <- function(txt) {
     txt_
   } else {txt}
   
-}
-
-# remove interior bolding to the '{feature name} - {feature type}:' text
-disembolden <- function(txt) {
-  txt_ <- txt
-  
-  nbd_strt_idx <- stri_locate_all(str = txt, regex = "xNBSx")[[1]]
-  nbd_end_idx <- stri_locate_all(str = txt, regex = "xNBEx")[[1]]
-  
-  if (!all(is.na(nbd_strt_idx))) {
-    nbd_idx <- matrix(nrow = nrow(nbd_strt_idx), ncol = 2, dimnames = list(NULL, c("start", "end")))
-    for (z in 1:nrow(nbd_idx)) {
-      nbd_idx[z,] <- c(nbd_strt_idx[z, "start"], nbd_end_idx[z, "end"])
-    }
-    
-    ptrns <- vapply(1:nrow(nbd_idx), \(z) {
-      gsub("<b>|</b>", "", substring(txt, first = nbd_idx[z, "start"], last = nbd_idx[z, "end"]))
-    }, character(1L))
-
-    for (z in length(ptrns):1) { # replacing back-to-front keeps position indices
-      stringi::stri_sub(txt_, from = nbd_idx[z, "start"], to = nbd_idx[z, "end"]) <- ptrns[z]
-    }
-    
-    gsub("xNB.x", "", txt_)
-  } else {gsub("xNB.x", "", txt)}
 }
 
 # 'main' feat processing function to replace <<DETAIL>> with desired adversary detail ----
@@ -407,9 +386,9 @@ process_feat_txt_dtl <- function(inpt, typ, num, txt) {
         prcs_nbr(ptrns[z], dice_dmg, avg_dmg, cstm_dice, tier_, minion_pasv, horde_perhp)
     }
     
-    txt_ |> embolden() |> disembolden()
+    embolden(txt_)
   } else {
-    txt |> embolden() |> disembolden()
+    embolden(txt)
   }
 }
 
