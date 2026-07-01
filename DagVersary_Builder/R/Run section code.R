@@ -113,7 +113,7 @@ msg_status <- function(inpt, typ, num) {
 }
 
 
-# function to bold /italicize key phrases in adversary featues -----------------
+# function to bold /italicize key phrases in adversary features ----------------
 process_feat_txt <- function(txt) {
   txt_ <- txt
   
