@@ -119,6 +119,21 @@ process_feat_txt <- function(txt) {
   
   find_bolders <- stri_locate_all(str = txt, regex = ".ark a .tress|.ark [0-9]+ .tress|.ark .tress|[0-9]+d[0-9]+|.pend a .ear|.pend [0-9]+ .ear|.pend .ear")[[1]]
   find_bolders <- cbind(find_bolders, 0) # creates 3 column with '0'
+  excl_bolder <- stri_locate_all(str = txt, regex = "until they .ark . .tress")[[1]]
+  
+  if (!all(is.na(find_bolders))) {
+    if (!all(is.na(excl_bolder))) {
+      if (is.null(nrow(find_bolders))) {find_bolders <- find_bolders |> as.matrix() |> t()}
+      for (i in 1:nrow(excl_bolder)) {
+        find_bolders[find_bolders[, "end"] == excl_bolder[i, "end"], c("start", "end")] <- NA 
+      }
+      find_bolders <- find_bolders[!is.na(find_bolders[, "start"]),]
+      if ( (is.null(nrow(find_bolders)) && is.na(find_bolders[1]) ) || 
+           (!is.null(nrow(find_bolders)) && nrow(find_bolders) == 0L) ) {
+        find_bolders <- matrix(c(NA, NA, 0), nrow = 1, dimnames = list(NULL, c("start", "end", "")))}
+    }
+  }
+  
   find_italics <- stri_locate_all(str = txt, regex = "Hidden|hidden|Restrained|restrained|Vulnerable|vulnerable")[[1]]
   find_italics <- cbind(find_italics, 1)
   
@@ -336,7 +351,7 @@ embolden <- function(txt) {
       nbr_idx <- nbr_idx.0[nbr_idx.0[, 1] > max(feat_start_idx[, 2]), ] |> matrix(ncol = 2)
       colnames(nbr_idx) <- c("start", "end")
     } else {nbr_idx <- NA}
-  }
+  } else {nbr_idx <- NA}
   
   if (!all(is.na(nbr_idx))) {
     ptrns <- vapply(1:nrow(nbr_idx), \(z) {
