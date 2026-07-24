@@ -17,11 +17,12 @@ source("R/Customize section code.R")
 source("R/Run section code.R")
 source("R/Obsidian_Daggerforge code.R")
 source("R/Obsidian_ITS Theme code.R")
+source("R/Environment Builder section code.R")
 
 # Define UI ====================================================================
 ui <- fluidPage(
-    titlePanel("Daggerheart Adversary Builder"),
-    tags$head(tags$style("
+  titlePanel("Daggerheart Adversary Builder"),
+  tags$head(tags$style("
     .container-fluid { background-color: #d3c0d3; }
     .nav { 
       background-color: #53386b;
@@ -111,69 +112,76 @@ ui <- fluidPage(
       background-color: #dbd2a7;
     }
     ")),
-    htmlOutput("use_note"),
-    tabsetPanel(type = "pills",
-      tabPanel(div("Start", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
-               numericInput("party_total",
-                            label = "# party members", value = 4, step = 1, min = 1, width = "140px"),
-               selectInput("fight_type",
-                           label = "Challenge", 
-                           choices = c("Regular",
-                                       "Regular (but adversary tier < party tier)",
-                                       "Easier/shorter", 
-                                       "Tougher (add +1d4 to adversary damage rolls)",
-                                       "Tougher (add +2 to adversary damage rolls)",
-                                       "Harder/longer"),
-                           selected = "Regular", width = "350px"),
-               selectInput("tier", "Select adversary tier", choices = tier_vals, 
-                           selected = 1, multiple = FALSE, width = "150px"),
-               htmlOutput("adv_tally"),
-               div(h5("Note: if you're running these via Obsidian - Daggerforge and want multiples of a specific adversary, just create them once here and specify the count in the Daggerforge plugin '- [#] +' interface.")),
-               uiOutput("adv_counts", 
-                        label = "Specify the # of adversaries by type"),
-               htmlOutput("warning_battle_points"),
-               htmlOutput("battle_points"),
-               htmlOutput("colossus_note")
-               ),
-      tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Customize details for your adversaries below, then move to 'Run'")),
-               htmlOutput("reset_caution"),
-               div("See notes below the feature reference table in the 'Feature Table' tab if you'd like to include adversary-specific details in your features."),
-               htmlOutput("dmg_note"),
-               div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
-                   selectInput("feat_fill_ct", "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
-               uiOutput("adv_spec")
-               ), 
-      tabPanel(div("Run", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
-               div(uiOutput("adv_run"))
-               ), 
-      tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
-               htmlOutput("dgrfg_colossus_note"),
-               downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
-               div(h4("The downloaded .json will look like the below:")),
-               verbatimTextOutput(outputId = "json_dl_prvw")
-               ), 
-      tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
-               div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
-               downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
-               div(h4("The downloaded .txt file will look like the below:")),
-               verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
-               ),
-      tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
-               div(h4("Lookup table of features for adversaries - customize as you see fit!")),
-               div(uiOutput("feat_tbl_msg")),
-               div(dataTableOutput("features_df")),
-               div(h4("Notes for dynamic feature details")),
-               htmlOutput("dynam_feat_notes")
-               ),
-    tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
-             htmlOutput("sources")
-             )
-      )
+  htmlOutput("use_note"),
+  tabsetPanel(type = "pills",
+              tabPanel(div("Start", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Specify party size, challenge type, adversary tier, and adversary counts, then move to 'Customize'")),
+                       numericInput("party_total", label = "# party members", value = 4, step = 1, min = 1, width = "140px"),
+                       selectInput("fight_type",
+                                   label = "Challenge", 
+                                   choices = c("Regular",
+                                               "Regular (but adversary tier < party tier)",
+                                               "Easier/shorter", 
+                                               "Tougher (add +1d4 to adversary damage rolls)",
+                                               "Tougher (add +2 to adversary damage rolls)",
+                                               "Harder/longer"),
+                                   selected = "Regular", width = "350px"),
+                       selectInput("tier", "Select adversary tier", choices = tier_vals, 
+                                   selected = 1, multiple = FALSE, width = "150px"),
+                       htmlOutput("adv_tally"),
+                       div(h5("Note: if you're running these via Obsidian - Daggerforge and want multiples of a specific adversary, just create them once here and specify the count in the Daggerforge plugin '- [#] +' interface.")),
+                       uiOutput("adv_counts", label = "Specify the # of adversaries by type"),
+                       htmlOutput("warning_battle_points"),
+                       htmlOutput("battle_points"),
+                       htmlOutput("colossus_note")
+              ),
+              tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Customize details for your adversaries below, then move to 'Run'")),
+                       htmlOutput("reset_caution"),
+                       div("See notes below the feature reference table in the 'Feature Table' tab if you'd like to include adversary-specific details in your features."),
+                       htmlOutput("dmg_note"),
+                       div(class="inline", title = "Minions and Hordes have different (default) behavior", style = "width: 300px;",
+                           selectInput("feat_fill_ct", label = "# filled features per adversary", choices = 0:5, selected = 0, width = "100px")),
+                       uiOutput("adv_spec")
+              ), 
+              tabPanel(div("Run", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
+                       div(uiOutput("adv_run"))
+              ), 
+              tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
+                       htmlOutput("dgrfg_colossus_note"),
+                       downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
+                       div(h4("The downloaded .json will look like the below:")),
+                       verbatimTextOutput(outputId = "json_dl_prvw")
+              ), 
+              tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+                       div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
+                       downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
+                       div(h4("The downloaded .txt file will look like the below:")),
+                       verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
+              ),
+              tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Lookup table of features for adversaries - customize as you see fit!")),
+                       div(uiOutput("feat_tbl_msg")),
+                       div(dataTableOutput("features_df")),
+                       div(h4("Notes for dynamic feature details")),
+                       htmlOutput("dynam_feat_notes")
+              ),
+              tabPanel(div("Environment Builder", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Template for creating an exporting environments for session use")),
+                       uiOutput("adv_counts", label = "Specify the # of adversaries by type"),
+                       selectInput("env_tier", "Select environment tier", choices = tier_vals, 
+                                   selected = 1, multiple = FALSE, width = "150px"),
+                       "MORE HERE"),
+              tabPanel(div("Environment Export", style = "font-size: 16px; color: #e8d37d;"),
+                       div(h4("Export created environment(s) as either a JSON or text file intended for use in Obsidian")),
+                       "MORE HERE"),
+              tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
+                       htmlOutput("sources")
+              )
+  )
 )
 
 # Define server ================================================================
@@ -182,7 +190,7 @@ server <- function(input, output, session) {
   output$use_note <- renderText({
     "<p>Custom adversary builder informed by <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credits</b> tab)</p>"
   })
-
+  
   ### TODO:
   ### - add validation checks with more user-friendly error messages
   
@@ -190,12 +198,12 @@ server <- function(input, output, session) {
   output$adv_counts <- renderUI({
     lapply(seq_along(adv_types), \(i) { build_adv_count(typ = adv_types[i]) })
   })
-
+  
   adv_ct_vec <- reactive({
     lapply(seq_along(adv_types), \(i) {
       validate(need(
         is.integer(input[[paste0(adv_types[i], "_count")]]) &&
-        input[[paste0(adv_types[i], "_count")]] >= 0,
+          input[[paste0(adv_types[i], "_count")]] >= 0,
         paste0(adv_types[i], " count input must be a single non-negative whole number on 'Start' tab. Use '0' for none.")
       ))
     })
@@ -226,7 +234,7 @@ server <- function(input, output, session) {
       5 * adv_ct_vec()[["Solo"]]
     )
   }) 
-
+  
   btl_pts_bdgt <- reactive({
     sum(
       3 * input$party_total + 2,
@@ -242,7 +250,7 @@ server <- function(input, output, session) {
       ifelse(input$fight_type == "Harder/longer", 2, 0)
     )
   })
-
+  
   output$warning_battle_points <- renderText({
     if (btl_pts_adv() > btl_pts_bdgt()) {
       "<p style ='color: red'><b><i>Current 'battle points' > your 'budget' - may be tougher than design intended</i></b></p>"
@@ -254,11 +262,11 @@ server <- function(input, output, session) {
   output$battle_points <- renderText({
     if (btl_pts_adv() == btl_pts_bdgt()) {
       "<p style = 'color:green'><b>Reached 'budget'!</b></p>"
-      } else {
+    } else {
       paste0("<p style = 'color:blue'><i>Current battle points: ", btl_pts_adv(), 
              "; 'budget': ", btl_pts_bdgt(), "</i></p>")
-      }
-    })
+    }
+  })
   
   output$colossus_note <- renderText({
     if (sum(adv_ct_vec()) > 0 && any(grepl("Colossus", names(active_adv_ct_vec()))) & adv_ct_vec()["Colossus_framework"] == 0) {
@@ -305,7 +313,7 @@ server <- function(input, output, session) {
   
   output$reset_caution <- renderText({
     "<p style = 'color: darkred; font-size: 18px;'><i>Please note: If you go back to the 'Start' tab and change any settings, the app will update and you will lose details entered in this tab and the Run/Obsidian/Feature Table tabs.</i></p>"
-    })
+  })
   
   output$dmg_note <- renderText({
     if (dmg_add() %in% c("+1d4", "+2")) {
@@ -318,23 +326,23 @@ server <- function(input, output, session) {
     renderUI({
       req(active_adv_ct_vec())
       output = tagList()
-
-    lapply(seq_along(active_adv_ct_vec()), \(i) {
-      lapply(1:active_adv_ct_vec()[i], \(j) {
-        output[[i]] <- tagList()
-        
-        if (grepl("Colossus", names(active_adv_ct_vec())[i])) {
-          output[[i]][[j]] <- 
-            div(class = "adv-input",
-                build_colossus_spec_ui(names(active_adv_ct_vec())[i], j, input$tier,
-                                       multi_frame = adv_ct_vec()["Colossus_framework"] > 1) )
-        } else {
-          output[[i]][[j]] <- 
-            div(class = "adv-input",
-                build_adv_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
-        }
-        
-        output
+      
+      lapply(seq_along(active_adv_ct_vec()), \(i) {
+        lapply(1:active_adv_ct_vec()[i], \(j) {
+          output[[i]] <- tagList()
+          
+          if (grepl("Colossus", names(active_adv_ct_vec())[i])) {
+            output[[i]][[j]] <- 
+              div(class = "adv-input",
+                  build_colossus_spec_ui(names(active_adv_ct_vec())[i], j, input$tier,
+                                         multi_frame = adv_ct_vec()["Colossus_framework"] > 1) )
+          } else {
+            output[[i]][[j]] <- 
+              div(class = "adv-input",
+                  build_adv_spec_ui(names(active_adv_ct_vec())[i], j, input$tier) )
+          }
+          
+          output
         })
       })
     })
@@ -380,7 +388,7 @@ server <- function(input, output, session) {
           nrow(horde_feat_df()) >= (as.numeric(input$feat_fill_ct) - 2)) { # populate as available
         feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
           feat_sampler_idx(active_adv_ct_vec()[["Horde"]], horde_feat_df(), as.numeric(input$feat_fill_ct) - 2)
-
+        
         for (i in 1:(active_adv_ct_vec()[["Horde"]])) {
           for (j in 1:(ncol(feat_idx_mat))) {
             update_inputs("Horde", i, j + 2, horde_feat_df(), feat_idx_mat[i, j])
@@ -420,14 +428,14 @@ server <- function(input, output, session) {
         if (!(adv_nm_ %in% c("Minion", "Horde", "Colossus_framework"))) {
           feat_idx_mat <- # row is adversary {#}, col is feature index in filtered feat_df()
             feat_sampler_idx(adv_ct_, filter(feat_df(), adv_type == adv_nm_), as.numeric(input$feat_fill_ct))
-        
-        for (j in 1:adv_ct_) { # per count within type
-          for (k in 1:min(5, as.numeric(input$feat_fill_ct), nrow(filter(feat_df(), adv_type == adv_nm_)))) {
-            update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
+          
+          for (j in 1:adv_ct_) { # per count within type
+            for (k in 1:min(5, as.numeric(input$feat_fill_ct), nrow(filter(feat_df(), adv_type == adv_nm_)))) {
+              update_inputs(adv_nm_, j, k, filter(feat_df(), adv_type == adv_nm_), feat_idx_mat[j, k])
             }
-          if (as.numeric(input$feat_fill_ct) < 5) {
-            for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
-              update_inputs(adv_nm_, j, k, data.frame(), NULL)
+            if (as.numeric(input$feat_fill_ct) < 5) {
+              for (k in 5:(as.numeric(input$feat_fill_ct) + 1)) {
+                update_inputs(adv_nm_, j, k, data.frame(), NULL)
               }
             }
           }
@@ -477,7 +485,7 @@ server <- function(input, output, session) {
             inputId = namify("Colossus_average_segment", i, "parent_frame"),
             choices = col_fw_names(), 
             selected = NULL) 
-          }
+        }
       }
       
     }
@@ -518,7 +526,7 @@ server <- function(input, output, session) {
           
           updateSelectInput(inputId = namify("Colossus_average_segment", i, paste0("mottac_adj", j)),
                             choices = 
-                                c("None", unique(name_optns)[unique(name_optns) != input[[namify("Colossus_average_segment", i, "name")]]])
+                              c("None", unique(name_optns)[unique(name_optns) != input[[namify("Colossus_average_segment", i, "name")]]])
           )
         }
       }
@@ -620,48 +628,52 @@ server <- function(input, output, session) {
   feat_tbl <- reactive({
     req(adv_runset())
     tryCatch({feat_df()}, error = \(e) {data.frame()})
-    })
+  })
   
   output$features_df <- 
     DT::renderDT(feat_tbl(), options = list(striped = TRUE, hover = TRUE), rownames = FALSE)
   
   output$dynam_feat_notes <- renderUI({
     HTML(paste0("<div style = 'font-size: 15px;'>",
-      "You can have adversary-specific details in the features you provide that this app will update. This works for the feature name and feature detail text fields, though generally it's meant for the feature detail text. Note that the 'dynamic' text must be within the &lt;&lt; &gt;&gt; 'double less than / double greater than' characters to work.<br>",
-      "<br>",
-      "Options currently supported are:<br>",
-      "<br>",
-      "&lt;&lt;tier&gt;&gt; : the tier number specified on the Start tab (can be useful for adversary-summoning details, number of attacks, or damage modifiers), ",
-      "e.g. <i>Spend a Fear to make &lt;&lt;tier&gt;&gt; standard attacks against the magical mystical MacGuffin to up the stakes.</i><br>",
-      "<br>",
-      "&lt;&lt;exp_dmg&gt;&gt; : the expected value/average of the adversary's standard attack damage - the expected value of the 'Dice damage' or the 'Avg damage' number depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
-      "<br>",
-      "&lt;&lt;dmg&gt;&gt; : either the 'Dice damage' detail (e.g. '1d6+2') or the 'Avg damage' number (e.g. '5') depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
-      "<br>",
-      "&lt;&lt;square_tier&gt;&gt; : the square of the tier number (can be useful for damage modifiers)<br>",
-      "<br>",
-      "&lt;&lt;tierside_left&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [8, 10, 12, 20] (can be useful for higher-damage attacks), ",
-      "e.g. <i>Spend a Fear to rhyme a word with orange - mortals within Close range must succeed on a Knowledge Reaction Roll or take 3d&lt;&lt;tierside_left&gt;&gt; magic damage. And no, 'door hinge' doesn't count.</i><br>",
-      "<br>",
-      "&lt;&lt;tierside_right&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [4, 6, 8, 10] (can be used for lower-damage attacks, though '0.5x dmg' or similar may make more sense)<br>",
-      "<br>",
-      "&lt;&lt;minion_pasv&gt;&gt; : plug in the 'Minion passive' value (only works for Minions, and only really used for the <i>Minion (#)</i> Passive feature)<br>",
-      "<br>",
-      "&lt;&lt;perhp&gt;&gt; : plug in the '{# Horde creatures per HP}' value (only works for Hordes, and only really used for the <i>Contains Multitudes</i> Passive feature)<br>",
-      "<br>",
-      "<b>Advanced functionality:</b><br>",
-      "You can modify details to multiply the dynamic value (use a positive number less than 1 to divide) or add to/subtract from the value (use whole numbers for any addition/subtraction); ",
-      "the following example doubles the dice damage value and adds 3 to the value (e.g. 1d6+2 becomes 2d6+5).<br>",
-      "<br>",
-      "<i>Mark a Stress and make a standard attack against a target within range. On a success, the target takes &lt;&lt;2x dmg +3&gt;&gt; physical damage.</i><br>",
-      "<br>",
-      "This app's code is meant for dice damage multipliers around 0.5 (half damage) to 3 (triple damage) - going beyond that range may not work, and there's a lower limit of 1d4.<br>",
-      "<br>",
-      "Modified 'Dice damage' details will try to calculate the combination of dice side and number of dice that has an expected value matching (or closest to) the multiplier/addition change - for example, if the 'Dice damage' detail is 3d10+4 (expected value: 20.5) and your feature includes &lt;&lt;1.5x dmg&gt;&gt;, the app will use 3d20-1 (expected value: 31.5; to keep the app from bogging down only a few addition/subtraction values are considered).<br><br>",
-      "</div>"
-      )
+                "You can have adversary-specific details in the features you provide that this app will update. This works for the feature name and feature detail text fields, though generally it's meant for the feature detail text. Note that the 'dynamic' text must be within the &lt;&lt; &gt;&gt; 'double less than / double greater than' characters to work.<br>",
+                "<br>",
+                "Options currently supported are:<br>",
+                "<br>",
+                "&lt;&lt;tier&gt;&gt; : the tier number specified on the Start tab (can be useful for adversary-summoning details, number of attacks, or damage modifiers), ",
+                "e.g. <i>Spend a Fear to make &lt;&lt;tier&gt;&gt; standard attacks against the magical mystical MacGuffin to up the stakes.</i><br>",
+                "<br>",
+                "&lt;&lt;exp_dmg&gt;&gt; : the expected value/average of the adversary's standard attack damage - the expected value of the 'Dice damage' or the 'Avg damage' number depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
+                "<br>",
+                "&lt;&lt;dmg&gt;&gt; : either the 'Dice damage' detail (e.g. '1d6+2') or the 'Avg damage' number (e.g. '5') depending on if you select 'Use Avg' for the 'Damage dice' selection<br>",
+                "<br>",
+                "&lt;&lt;square_tier&gt;&gt; : the square of the tier number (can be useful for damage modifiers)<br>",
+                "<br>",
+                "&lt;&lt;tierside_left&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [8, 10, 12, 20] (can be useful for higher-damage attacks), ",
+                "e.g. <i>Spend a Fear to rhyme a word with orange - mortals within Close range must succeed on a Knowledge Reaction Roll or take 3d&lt;&lt;tierside_left&gt;&gt; magic damage. And no, 'door hinge' doesn't count.</i><br>",
+                "<br>",
+                "&lt;&lt;tierside_right&gt;&gt; : selects from the following listing of dice sides, in increasing position by tier number: [4, 6, 8, 10] (can be used for lower-damage attacks, though '0.5x dmg' or similar may make more sense)<br>",
+                "<br>",
+                "&lt;&lt;minion_pasv&gt;&gt; : plug in the 'Minion passive' value (only works for Minions, and only really used for the <i>Minion (#)</i> Passive feature)<br>",
+                "<br>",
+                "&lt;&lt;perhp&gt;&gt; : plug in the '{# Horde creatures per HP}' value (only works for Hordes, and only really used for the <i>Contains Multitudes</i> Passive feature)<br>",
+                "<br>",
+                "<b>Advanced functionality:</b><br>",
+                "You can modify details to multiply the dynamic value (use a positive number less than 1 to divide) or add to/subtract from the value (use whole numbers for any addition/subtraction); ",
+                "the following example doubles the dice damage value and adds 3 to the value (e.g. 1d6+2 becomes 2d6+5).<br>",
+                "<br>",
+                "<i>Mark a Stress and make a standard attack against a target within range. On a success, the target takes &lt;&lt;2x dmg +3&gt;&gt; physical damage.</i><br>",
+                "<br>",
+                "This app's code is meant for dice damage multipliers around 0.5 (half damage) to 3 (triple damage) - going beyond that range may not work, and there's a lower limit of 1d4.<br>",
+                "<br>",
+                "Modified 'Dice damage' details will try to calculate the combination of dice side and number of dice that has an expected value matching (or closest to) the multiplier/addition change - for example, if the 'Dice damage' detail is 3d10+4 (expected value: 20.5) and your feature includes &lt;&lt;1.5x dmg&gt;&gt;, the app will use 3d20-1 (expected value: 31.5; to keep the app from bogging down only a few addition/subtraction values are considered).<br><br>",
+                "</div>"
+    )
     )
   })
+  
+  # server Environment Builder panel -------------------------------------------
+  
+  # server Environment Export panel --------------------------------------------
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
