@@ -680,7 +680,8 @@ server <- function(input, output, session) {
                "<br>- An actual number (e.g. 'Countdown (4)')",
                "<br>- A number with a modifying word 'loop', 'increasing', or 'decreasing' before the number (e.g. 'Countdown (loop 4)'",
                "<br>- A dice indicator for randomized countdowns (e.g. 'Countdown (1d4)'); a loop modifier can be applied (e.g. 'Countdown (loop 1d4)')",
-               "<br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which",
+               "<br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which.",
+               "<br>- When there are -multiple- countdowns in a single feature, the exported environment text for the Daggerforge JSON will intentionally replace the word 'Countdown' with 'Ctdown' as the JSON will create standalone countdown entries for the multiples; default Daggerforge processing may not capture both countdowns using the initial text and the 'intentional typo' will prevent the default processing from duplicating the countdowns.",
                "<br>- Note that because Daggerforge and ITS Theme countdown UI don't currently support automated increases to the counter maximum, an <i>increasing</i> countdown will have have 5 additional counter slots to provide some buffer counters.",
                "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'.")),
         style = "font-size: 16px; color: darkblue;")
