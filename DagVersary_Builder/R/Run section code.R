@@ -14,16 +14,11 @@ list_adv_desc <- function(inpt, typ, num) {
 }
 
 list_motives_tactics <- function(inpt, typ, num) {
-  mt1 <- inpt[[namify(typ, num, "mottac1")]]
-  mt2 <- inpt[[namify(typ, num, "mottac2")]]
-  mt3 <- inpt[[namify(typ, num, "mottac3")]]
+  mts <- inpt[[namify(typ, num, "mottacs")]]
   
-  if (any(mt1 != "", mt2 != "", mt3 != "")) {
+  if (mts != "") {
     fluidRow(paste0("Motives and tactics: ", 
-                    paste(ifelse(mt1 != "", mt1, "_drop_"),
-                          ifelse(mt2 != "", mt2, "_drop_"),
-                          ifelse(mt3 != "", mt3, "_drop_"), sep = ", ") |> 
-                      gsub(pattern = " ,|_drop_,|, _drop_|,$", replacement = "")))
+                    gsub(pattern = " ,|_drop_,|, _drop_|,$", replacement = "", x = mts)))
   }
 }
 
@@ -180,7 +175,7 @@ process_feature <- function(inpt, typ, num, ftrnum, mark_nobold = FALSE) {
   
   feattyp <- reactive({
     if (has_feattxt(inpt, typ, num, ftrnum)) {
-      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ":", if (mark_nobold) {"xNBEx"})
+      paste0(" - ", inpt[[namify(typ, num, paste0("feattype_", ftrnum))]], ":", if (mark_nobold) {"xNBSx"})
     }
   })
   

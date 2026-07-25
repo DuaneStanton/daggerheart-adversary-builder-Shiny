@@ -9,6 +9,10 @@ textify <- function(typ, num, detail, placehold, wd = NULL, val = "") {
   textInput(inputId = namify(typ, num, detail), label = NULL, value = val, placeholder = placehold, width = wd)
 }
 
+textAreafy <- function(typ, num, detail, placehold, wd = NULL, val = "") {
+  textAreaInput(inputId = namify(typ, num, detail), label = NULL, value = val, placeholder = placehold, width = wd, rows = 2, resize = "vertical")
+}
+
 numerify <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px", inpwd = NULL) {
   df__ <- df_[df_$tier == tier & df_$adv_type == type,]
   div(title = recommend_range(df_, tier, type, paste0(detail, "_rng")), 
@@ -43,7 +47,7 @@ featurize <- function(type, num, detail_nbr, nm_val = "", ft_sel = NULL, dsc_val
            div(class = "bottom-aligned",
                div(textify(type, num, dtl_ftnm, "Feature name", "180px", nm_val)),
                div(selectInput(namify(type, num, dtl_fttyp), label = "Feature type", choices = c("Passive", "Action", "Reaction"), selected = ft_sel, width = "110px")),
-               div(textify(type, num, dtl_ftdsc, "Feature description", "420px", dsc_val)) ))
+               div(textAreafy(type, num, dtl_ftdsc, "Feature description", "420px", dsc_val)) ))
   )
 }
 
@@ -53,9 +57,7 @@ build_adv_spec_ui <- function(typ, num, tr) {
     h3(renderText({paste0("Tier ", tr, " ", typ, " (#", num, ")")})),
     textify(typ, num, "name", paste0(typ, "_", num, " (name)"), "250px"),
     textify(typ, num, "desc", "A brief description of the adversary", "400px"),
-    textify(typ, num, "mottac1", "Motive/tactic 1", "200px"),
-    textify(typ, num, "mottac2", "Motive/tactic 2", "200px"),
-    textify(typ, num, "mottac3", "Motive/tactic 3", "200px"),
+    textAreafy(typ, num, "mottacs", "Motive(s)/tactic(s)", "400px"),
     fluidRow(
       column(width = 12, offset = 0,
              div(class = "bottom-aligned",

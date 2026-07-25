@@ -63,13 +63,10 @@ markdown_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
     paste0(inpt[[namify(typ, num, "name")]], 
            if (typ == "Horde") {paste0(" (", inpt[[namify(typ, num, "perhp")]], "/HP)")})
   
-  mot1 <- if (inpt[[namify(typ, num, "mottac1")]] != "") {inpt[[namify(typ, num, "mottac1")]]}
-  mot2 <- if (inpt[[namify(typ, num, "mottac2")]] != "") {inpt[[namify(typ, num, "mottac2")]]}
-  mot3 <- if (inpt[[namify(typ, num, "mottac3")]] != "") {inpt[[namify(typ, num, "mottac3")]]}
+  mots <- if (inpt[[namify(typ, num, "mottacs")]] != "") {inpt[[namify(typ, num, "mottacs")]]}
   
   mottac <- 
-    if (any(!is.null(mot1), !is.null(mot2), !is.null(mot3))) {
-      paste(mot1, mot2, mot3, sep = ", ") |> sub(pattern = ", $", replacement = "")} else {""}
+    if (!is.null(mots)) {sub(pattern = ", $", replacement = "", x = mots)} else {""}
   
   dmg_dice <- 
     if (inpt[[namify(typ, num, "dmg_dice")]] == "Custom") {inpt[[namify(typ, num, "cstm_dc")]]
