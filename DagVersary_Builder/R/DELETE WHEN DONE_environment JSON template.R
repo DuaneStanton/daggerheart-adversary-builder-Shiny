@@ -1,51 +1,82 @@
 # template JSON for Environments for Daggerforge
-
-"environments": [
-  {
-    "id": "CUE_1784148591206_e2hd7fqz",
-    "name": "OUTPOST TOWN (mod)",
-    "tier": "1",
-    "type": "Social",
-    "desc": "A small town on the outskirts of a nation or region, close to a dungeon, tombs, or other adventuring destinations.",
-    "impulse": "Drive the desperate to certain doom, profit off of ragged hope",
-    "difficulty": "12",
-    "potentialAdversaries": "Jagged Knife Bandits (Hexer, Kneebreaker, Lackey, Lieutenant, Shadow, Sniper), Masked Thief, Merchant",
-    "source": "custom",
-    "features": [
-      {
-        "name": "Rumors Abound",
-        "type": "Passive",
-        "richContent": "<div class=\"df-p\">Gossip is the fastest-traveling currency in the realm. A PC can inquire about major events by making a Presence Roll. What they learn depends on the outcome of their roll, based on the following criteria:</div><div class=\"df-ul\"><div class=\"df-li\"><div class=\"df-p\">Critical Success: Learn about two major events. The PC can ask one follow-up question about one of the rumors and get atruthful (if not always complete) answer.</div></div><div class=\"df-li\"><div class=\"df-p\">Success with Hope: Learn about two events, at least one of which is relevant to the character’s background.</div></div><div class=\"df-li\"><div class=\"df-p\">Success with Fear: Learn an alarming rumor related to the character’s background.</div></div><div class=\"df-li\"><div class=\"df-p\">Any Failure: The locals respond poorly to their inquiries. The PC must mark a Stress to learn one relevant rumor.</div></div></div>",
-        "questions": [
-          "What news do the PCs have that they could pass along to curious travelers?",
-          "What do the locals think about these events?"
-        ]
-      },
-      {
-        "name": "Rival Party",
-        "type": "Passive",
-        "richContent": "<div class=\"df-p\">Another adventuring party is here, seeking the same treasure or leads as the PCs.</div>",
-        "questions": [
-          "Which PC has a connection to one of the rival party members?",
-          "Do they approach the PC first or do they wait for the PC to move?"
-        ]
-      },
-      {
-        "name": "It’d Be a Shame If Something Happened to Your Store",
-        "type": "Action",
-        "richContent": "<div class=\"df-p\">The PCs witness as agents of a local crime boss shake down a general goods store.</div>",
-        "questions": [
-          "What trouble does it cause if the PCs intervene?"
-        ]
-      },
-      {
-        "name": "Wrong Place, Wrong Time",
-        "type": "Reaction",
-        "richContent": "<div class=\"df-p\">At night, or when the party is alone in a back alley, you can spend a Fear to introduce a group of thieves who try to rob them. The thieves appear at Close range of a chosen PC and include a Jagged Knife Kneebreaker, as many Lackeys as there are PCs, and a Lieutenant. For a larger party, add a Hexer or Sniper.</div>",
-        "questions": [
-          "What details show the party that these people are desperate former adventurers?"
-        ]
-      }
-    ]
-  }
-]
+# 
+# "environments": [
+# {
+#   "id": "CUE_1785019111621_0cpgevox",
+#   "name": "CLIFFSIDE ASCENT (mod TEST)",
+#   "tier": "1",
+#   "type": "Traversal",
+#   "desc": "A steep, rocky cliff side tall enough to make traversal dangerous.",
+#   "impulse": "Cast the unready down to a rocky doom, draw people in with promise of what lies at the top",
+#   "difficulty": "12",
+#   "potentialAdversaries": "Construct, Giant Scorpion, Glass Snake",
+#   "source": "custom",
+#   "features": [
+#     {
+#       "name": "The Climb",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Climbing up the cliff side uses a Progress Countdown (12). It ticks down according to the following criteria when the PCs make an action roll to climb:</div><div class=\"df-ul\"><div class=\"df-li\"><div class=\"df-p\">Critical Success: Tick down 3</div></div><div class=\"df-li\"><div class=\"df-p\">Success with Hope: Tick down 2</div></div><div class=\"df-li\"><div class=\"df-p\">Success with Fear: Tick down 1</div></div><div class=\"df-li\"><div class=\"df-p\">Failure with Hope: No advancement</div></div><div class=\"df-li\"><div class=\"df-p\">Failure with Fear: Tick up 1</div></div></div><div class=\"df-p\">When the countdown triggers, the party has made it to the top of the cliff .</div>",
+#       "questions": [
+#         "What strange formations are the stones arranged in?",
+#         "What ominous warnings did previous adventurers leave?"
+#       ]
+#     },
+#     {
+#       "name": "Pitons Left Behind",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Previous climbers left behind large metal rods that climbers can use to aid their ascent. If a PC using the pitons fails an action roll to climb, they can mark a Stress instead of ticking the countdown up.</div>",
+#       "questions": [
+#         "What do the shape and material of these pitons tell you about the previous climbers?",
+#         "How far apart are they from one another?",
+#         "Are all the pitons real, or are some illusory?"
+#       ]
+#     },
+#     {
+#       "name": "Fall",
+#       "type": "Action",
+#       "cost": "Spend a Fear",
+#       "richContent": "<div class=\"df-p\">to have a PC’s handhold fail, plummeting them toward the ground. If they aren’t saved on the next action, they hit the ground and tick up the countdown by 2. The PC takes 1d12 physical damage if the countdown is between 8 and 12, 2d12 between 4 and 7, and 3d12 at 3 or lower.</div>",
+#       "questions": [
+#         "How can you tell many others have fallen here before?",
+#         "What lives in these walls that might try to scare adventurers into falling for an easy meal?"
+#       ]
+#     },
+#     {
+#       "name": "test Loop Countdown",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Begin a Countdown (loop 4)</div>",
+#       "questions": []
+#     },
+#     {
+#       "name": "test Decreasing Countdown",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Begin a Countdown (decreasing 5)</div>",
+#       "questions": []
+#     },
+#     {
+#       "name": "test Increasing Countdown",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Begin a Countdown (increasing 5)</div>",
+#       "questions": []
+#     },
+#     {
+#       "name": "test Dynamic Loop Countdown",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Begin a Countdown (loop d4)</div>",
+#       "questions": []
+#     },
+#     {
+#       "name": "test Dynamic Countdown",
+#       "type": "Passive",
+#       "richContent": "<div class=\"df-p\">Begin a Countdown (d6)</div>",
+#       "questions": []
+#     }
+#   ],
+#   "countdowns": [
+#     {
+#       "name": "The Climb",
+#       "max": 12
+#     }
+#   ]
+# }
+# ]

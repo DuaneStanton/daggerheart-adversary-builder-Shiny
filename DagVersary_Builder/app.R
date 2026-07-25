@@ -171,9 +171,12 @@ ui <- fluidPage(
               ),
               tabPanel(div("Environment Builder", style = "font-size: 16px; color: #e8d37d;"),
                        div(h4("Template for creating an exporting environments for session use")),
-                       uiOutput("adv_counts", label = "Specify the # of adversaries by type"),
+                       div("Note: Updating the environment tier / type count will reset the entry fields; it's better to complete your work for in-progress evironments if you decide to change things.", style = "font-size: 16px; color: darkblue"),
                        selectInput("env_tier", "Select environment tier", choices = tier_vals, 
-                                   selected = 1, multiple = FALSE, width = "150px"),
+                                   selected = 1, multiple = FALSE, width = "180px"),
+                       uiOutput("env_notes"),
+                       uiOutput("env_counts", label = "Specify the # of environments by type"),
+                       uiOutput("env_spec"),
                        "MORE HERE"),
               tabPanel(div("Environment Export", style = "font-size: 16px; color: #e8d37d;"),
                        div(h4("Export created environment(s) as either a JSON or text file intended for use in Obsidian")),
@@ -190,9 +193,6 @@ server <- function(input, output, session) {
   output$use_note <- renderText({
     "<p>Custom adversary builder informed by <i>RightKnighttoFight</i>'s Guide and the Daggerheart SRD (see <b>Credits</b> tab)</p>"
   })
-  
-  ### TODO:
-  ### - add validation checks with more user-friendly error messages
   
   # server Start panel ---------------------------------------------------------
   output$adv_counts <- renderUI({
@@ -672,6 +672,58 @@ server <- function(input, output, session) {
   })
   
   # server Environment Builder panel -------------------------------------------
+  output$env_notes <- renderUI({
+    div(HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
+               "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>",
+               "<br>Special wording considerations for countdowns in feature text:",
+               "<br>- Always use 'Countdown (#*)' for feature description text, where the '#*' element can use the following options as noted below:",
+               "<br>- An actual number (e.g. 'Countdown (4)')",
+               "<br>- A number with a modifying word 'loop', 'increasing', or 'decreasing' before the number (e.g. 'Countdown (loop 4)'",
+               "<br>- A dice indicator for randomized countdowns (e.g. 'Countdown (1d4)'); a loop modifier can be applied (e.g. 'Countdown (loop 1d4)')",
+               "<br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which",
+               "<br>- Note that because Daggerforge and ITS Theme countdown UI don't currently support automated increases to the counter maximum, an <i>increasing</i> countdown will have have 5 additional counter slots to provide some buffer counters.",
+               "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'.")),
+        style = "font-size: 16px; color: darkblue;")
+  })
+  
+  output$env_counts <- renderUI({
+    lapply(seq_along(env_types), \(i) { build_env_count(typ = names(env_types)[i]) })
+  })
+  
+  env_ct_vec <- reactive({
+    lapply(seq_along(env_types), \(i) {
+      validate(need(
+        is.integer(input[[paste0(names(env_types)[i], "_count")]]) &&
+          input[[paste0(names(env_types)[i], "_count")]] >= 0,
+        paste0(names(env_types)[i], " count input must be a single non-negative whole number. Use '0' for none.")
+      ))
+    })
+    v <- vapply(seq_along(env_types), 
+                \(i){ input[[paste0(names(env_types)[i], "_count")]] },
+                numeric(1L))
+    names(v) <- names(env_types)
+    v
+  })
+  
+  active_env_ct_vec <- reactive({env_ct_vec()[env_ct_vec() > 0]})
+  
+  output$env_spec <-
+    renderUI({
+      req(min(active_adv_ct_vec()) > 0)
+      output = tagList()
+      
+      lapply(seq_along(active_env_ct_vec()), \(i) {
+        lapply(1:active_env_ct_vec()[i], \(j) {
+          output[[i]] <- tagList()
+          
+          output[[i]][[j]] <- 
+            div(class = "env-input",
+                build_env_spec_ui(names(active_env_ct_vec())[i], j, input$env_tier) )
+          
+          output
+        })
+      })
+    })
   
   # server Environment Export panel --------------------------------------------
   
