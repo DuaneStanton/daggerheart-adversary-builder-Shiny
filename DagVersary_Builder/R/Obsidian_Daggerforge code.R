@@ -175,7 +175,7 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
     }
   
   list(
-    id = paste0("Dagversary_", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+    id = paste0("Dagversary_a", paste("a", sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
     name = adv_name,
     tier = tr,
     type = gsub("_", " ", typ),

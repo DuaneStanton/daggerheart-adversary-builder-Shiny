@@ -676,6 +676,7 @@ server <- function(input, output, session) {
     div(HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
                "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>",
                "<br>Special wording considerations for countdowns in feature text:",
+               "<br>- Please use only one countdown in a feature OR a paired Progress/Consequence countdown using fixed numbers in a single feature; Daggerforge processing will not automatically recognize and include the second countdown in a feature and this program only accounts for paired Progress/Consequence countdowns of type 'countdown (single #).",
                "<br>- Always use 'Countdown (#*)' for feature description text, where the '#*' element can use the following options as noted below:",
                "<br>- An actual number (e.g. 'Countdown (4)')",
                "<br>- A number with a modifying word 'loop', 'increasing', or 'decreasing' before the number (e.g. 'Countdown (loop 4)'",
