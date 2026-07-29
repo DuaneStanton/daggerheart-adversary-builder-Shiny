@@ -96,7 +96,7 @@ json_prep_adversary <- function(inpt, typ, num, tr, auto_feat_ct) {
     } else {inpt[[namify(typ, num, "dmg_avg")]]}
 
   list( # fun 'fact': apparently 26^5 * 26^5 * 10^5 ~= 1.4e19 is in the ballpark of the total # of grains of sand in the entire world (mostly on beaches)
-    id = paste0("Dagversary_", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+    id = paste0("Dagversary_a", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
     name = adv_name,
     tier = tr,
     type = typ,
@@ -175,7 +175,7 @@ json_prep_adversary_col <- function(inpt, typ, num, tr, fwk_id, auto_feat_ct) {
     }
   
   list(
-    id = paste0("Dagversary_a", paste("a", sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+    id = paste0("Dagversary_a", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
     name = adv_name,
     tier = tr,
     type = gsub("_", " ", typ),
