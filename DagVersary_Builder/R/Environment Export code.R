@@ -1,11 +1,14 @@
 # code for Obsidian - Daggerforge and Obsidian - ITS Theme environments export
 
-example_feature_names <- c("Thing The First", "Second Thing", "Three's The Charm", "Dark side of the fourth", "Five on it")
-example_feature_descriptions <- c("Nothing to find in here", 
-                                  "Spend a Fear to initiate a Progress Countdown (4) and Consequence Countdown (5) and stuff",
-                                  "Single countdown (loop 1d4) to spice things up",
-                                  "A countdown (3) then a countdown(2) then a countdown (1)",
-                                  "A test consequence countdown (increasing 2) to become Hidden and Vulnerable, then Mark 2 Stress")
+# example_feature_names <- c("Thing The First", "Second Thing", "Three's The Charm", "Dark side of the fourth", "Five on it")
+# example_feature_descriptions <- c("Nothing to find in here", 
+#                                   "Spend a Fear to initiate a Progress Countdown (4) and Consequence Countdown (5) and stuff",
+#                                   "Single countdown (loop 1d4) to spice things up",
+#                                   "A countdown (3) then a countdown(2) then a countdown (1)",
+#                                   "A test consequence countdown (increasing 2) to become Hidden and Vulnerable, then Mark 2 Stress")
+# 
+# x <- 
+#   process_countdowns(example_feature_names, example_feature_descriptions)
 
 # prelim countdown-processing functions ----------------------------------------
 count_countdown <- function(txt) {
@@ -36,7 +39,15 @@ typify_countdown <- function(count_countdown_output) {
       vapply(1:length(ctdn_txt), \(i) {
         prog <- grepl("progress countdown", tolower(ctdn_txt[i]))
         cnsq <- grepl("consequence countdown", tolower(ctdn_txt[i]))
-        if (!prog & !cnsq) {"norm"} else if (prog) {"Progress"} else {"Consequence"}
+        loop <- grepl("loop\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
+        inc <- grepl("increasing\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
+        dec <- grepl("decreasing\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
+        if (prog) {"Progress"
+        } else if (cnsq) {"Consequence"
+        } else if (loop) {"Loop"
+        } else if (inc) {"Increasing"
+        } else if (dec) {"Decreasing"
+        } else {"norm"}
       }, character(1L))
   }
   
@@ -95,7 +106,7 @@ prep_markdown_countdowns <- function(feature_name, typify_countdown_types, extra
     
     countdown_val_vec
   }
-} 
+}
 
 # function to process countdown details from environment features for Daggerforge/Obsidian use
 process_countdowns <- function(feat_names, feat_descs) {
@@ -113,7 +124,6 @@ process_countdowns <- function(feat_names, feat_descs) {
   ctdn_mdp <- lapply(1:length(feat_names), \(i) {
     prep_markdown_countdowns(feat_names[i], ctdn_typ[[i]]$typ, ctdn_nbr[[i]])
   })
-  
   
   # Daggerforge uses custom countdowns for increasing countdowns OR
   # there are more than 2 countdowns present for the feature
@@ -143,29 +153,6 @@ process_countdowns <- function(feat_names, feat_descs) {
        "md_fd" = markdown_featdesc,
        "df_fd" = daggerforge_featdesc, 
        "df_cd" = daggerforge_ctdns)
-}
-
-x <- 
-  process_countdowns(example_feature_names, example_feature_descriptions)
-
-# function to process feature text for Daggerforge/Markdown
-process_env_feattxt_md <- function(feat_names, feat_types, feat_descs, feat_typidx, countdown_nbrs) {
-  df_ <- 
-  data.frame(
-    txt = 
-      vapply(1:length(feat_names), \(z) {
-        paste0("***",feat_names[i], " - ", feat_types[i], ":",  "*** ", feat_descs[i])
-        }, character(1L)),
-    idx = feat_typidx
-  )
-  
-  ###
-  ### DON'T FORGET QUESTIONS! SEE ABANDONED GROVE IN OBSIDIAN FOR STYLING REFERENCE
-  ###
-  
-  ### MAKE SURE INDICES STAY WITH THE EXACT FEATURE, NOT JUST THE FEATURE TYPE
-  list("features" = df_$txt[order(df_$idx)],
-       "countdowns" = countdown_nbrs[order(df_$idx)])
 }
 
 
@@ -243,7 +230,7 @@ process_env_features <- function(inpt, typ, num) {
   )
 }
 
-process_env_feats_df <- function(feat_list) {#feat_names, feat_types, feat_descs, feat_qs, feat_typidx, countdown_nbrs) {
+process_env_feats_df <- function(feat_list) {
   # ADD PRELIMINARY 'CHECK IF NOT FULLY EMPTY/NULL' HERE?
   
   df_ <- 
@@ -254,6 +241,8 @@ process_env_feats_df <- function(feat_list) {#feat_names, feat_types, feat_descs
       idx = feat_list$feat_typeidx,#feat_typidx
       qs = feat_list$feat_qs
     )
+  
+  df_$countdown_nbrs <- lapply(1:nrow(df_), \(z){feat_list$df_cd[[z]]})
   
   df_ <- df_[order(df_$idx),]
   df_ <- df_[df_$idx > 0,]
@@ -272,8 +261,6 @@ process_env_feats_df <- function(feat_list) {#feat_names, feat_types, feat_descs
            } else {sub(paste0("^.+", df_$cost[z], "<*/*b*>*"), "", df_$desc[z])},
            "</div>\u0022,\n")
   }, character(1L))
-  
-  df_$countdown_nbrs <- lapply(1:length(countdown_nbrs), \(z){countdown_nbrs[[z]]})
   
   countdowns <- lapply(1:nrow(df_), \(z) {
     ctdn <- df_$countdown_nbrs[[z]]
@@ -345,6 +332,35 @@ process_env_feats_df <- function(feat_list) {#feat_names, feat_types, feat_descs
   ### RESUME HERE
   ###
 
+jsonify_environment <- function(inpt, typ, num, tr) {
+  features_countdowns <- 
+    process_env_features(inpt, typ, num) |> 
+    process_env_feats_df()
+  
+  paste0("{\n",
+         "\u0009\u0022id\u0022: \u0022", 
+         paste0("Dagversary_e", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+         "\u0022,\n",
+         "\u0009\u0022name\u0022: \u0022", inpt[[namify(typ, num, "name")]], "\u0022,\n",
+         "\u0009\u0022tier\u0022: \u0022", inpt[["env_tier"]], "\u0022,\n",
+         "\u0009\u0022desc\u0022: \u0022", inpt[[namify(typ, num, "desc")]], "\u0022,\n",
+         "\u0009\u0022impulse\u0022: \u0022", inpt[[namify(typ, num, "impulses")]], "\u0022,\n",
+         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
+         "\u0009\u002potentialAdversaries\u0022: \u0022", inpt[[namify(typ, num, "ptntl_adv")]], "\u0022,\n",
+         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
+         "\u0009\u0022source\u0022: \u0022custom\u0022,\n",
+         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
+         features_countdowns$features,
+         if (!is.null(features_countdowns$countdowns)) {
+           paste0(",\n", features_countdowns$countdowns)
+         }
+         )
+}
+
+
+###
+### NOT USED
+###
 # function to create environment details list for export handling --------------
 build_env_export_list <- function(inpt, typ, num, tr, for_md = TRUE) {
   feat_names <- x
@@ -357,8 +373,8 @@ build_env_export_list <- function(inpt, typ, num, tr, for_md = TRUE) {
   
   ### BELOW HERE ONLY FOR REFERENCE
   list(
-    "id" = .,
-    "name" = .,
+    id = paste0("Dagversary_a", paste("a", sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+    "name" = paste0(inpt[[namify(typ, num, "name")]]),
     "tier" = .,
     "type" = .,
     "desc" = .,
@@ -386,4 +402,163 @@ build_env_export_list <- function(inpt, typ, num, tr, for_md = TRUE) {
 
 
 # ITS Theme (markdown) export processing =======================================
+markdownize_countdown <- function(countdown_name_max_vec_list) {
+  cnmvl <- countdown_name_max_vec_list
+}
 
+# general structure:
+
+process_env_feats_md <- function(feat_list) {
+  # ADD PRELIMINARY 'CHECK IF NOT FULLY EMPTY/NULL' HERE?
+  
+  df_ <- 
+    data.frame(
+      nm = feat_list$feat_names,#feat_names,
+      typ = feat_list$feat_types,#feat_types,
+      desc = feat_list$feat_processed_txt$df_fd,#feat_descs,
+      idx = feat_list$feat_typeidx,#feat_typidx
+      qs = feat_list$feat_qs
+    )
+  
+  df_$countdown_nbrs <- lapply(1:length(feat_list$md_cd), \(z) {feat_list$md_cd[[z]]})
+  
+  df_ <- df_[order(df_$idx),]
+  df_ <- df_[df_$idx > 0,]
+  
+  df_$feat <- paste0("***", df_$nm, " - ", df_$typ, ":*** ", df_$desc)
+  
+  
+  
+  countdowns <- lapply(1:nrow(df_), \(z) {
+    ctdn <- df_$countdown_nbrs[[z]]
+    
+    list_set <- 
+      if (!is.null(ctdn)) {
+        lapply(1:length(ctdn), \(y) {
+          c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
+        })
+      }
+  }) |> unlist(recursive = FALSE)
+  ###
+  ### output structure: list(c("name" = ..., "max" = ...), c("name" = ..., "max" = ...), ...)
+  ###
+  
+  ###
+  ### BELOW HERE ONLY FOR REFERENCE
+  ###
+  
+  df_$qstns <- lapply(1:nrow(df_), \(z) {
+    if (nchar(df_$qs[z]) > 0) {
+      strsplit(df_$qs[z], split = "\\?")[[1]] |> 
+        as.character() |> 
+        paste0("?") |> 
+        sub(pattern = "^ ", replacement = "")
+    }
+  })
+  
+  daggerforge_features <- 
+    lapply(1:nrow(df_), \(z) {
+      paste0("\u0009\u0009{\n", 
+             "\u0009\u0009\u0009\u0022name\u0022: \u0022", df_$nm[z], "\u0022,\n",
+             "\u0009\u0009\u0009\u0022type\u0022: \u0022", df_$typ[z], "\u0022,\n",
+             if (!is.na(df_$cost[z])){paste0("\u0009\u0009\u0009", df_$cost[z])},
+             "\u0009\u0009\u0009\u0022richContent\u0022: \u0022", df_$richContent[z], "\u0022,\n",
+             "\u0009\u0009\u0009\u0022questions\u0022: [",
+             if (!is.null(df_$qstns[[z]])) {
+               paste0(
+                 "\n",
+                 vapply(1:length(df_$qstns[[z]]), \(y) {
+                   paste0("\u0009\u0009\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
+                 }, character(1L)) |> paste(collapse = ",\n"),
+                 "\u0009\u0009\u0009]"
+               )
+             } else {"]\n"},
+             "\u0009\u0009}"
+      )
+    }) |> paste(collapse = ",\n")
+  
+  daggerforge_features <- 
+    paste0("\u0009\u0022features\u0022: [\n", daggerforge_features, "\n\u0009]")
+  
+  # note: these are only 'manually processed' countdowns for cases where 1+
+  # features has 2+ countdowns
+  daggerforge_countdowns <- 
+    if (!is.null(countdowns)) {
+      paste0(
+        "\u0009\u0022countdowns\u0022: [\n",
+        vapply(1:length(countdowns), \(z) {
+          paste0(
+            "\u0009\u0009{\n",
+            "\u0009\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
+            "\u0009\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
+            "\u0009\u0009}"
+          )
+        }) |> 
+          paste(collapse = ",\n"),
+        "\u0009]\n"
+      )
+    }
+  
+  list("features" = daggerforge_features, "countdowns" = daggerforge_countdowns)
+}
+
+
+
+
+
+process_env_feats_md <- function() {
+  
+}
+
+process_env_countdowns_md <- function() {
+  
+}
+
+
+> [!infobox| background-purple wfull]+
+> # Abandoned Grove (tier 1 Exploration)
+> *A former druidic grove lying fallow and fully reclaimed by nature*
+> **Impulses:** Draw in the curious, echo the past
+> Difficulty: 11
+> Potential Adversaries: Beasts (Bear, Dire Wolf, Glass Snake), Grove Guardians (Minor Treant, Sylvan Soldier, Young Dryad)
+> ###### Features
+> - ***Overgrown Battlefield - Passive:*** There has been a battle here. A PC can make an Instinct Roll to identify evidence of that fight. On a success with Hope, learn all three pieces of information below. On a success with Fear, learn two. On a failure, a PC can mark a Stress to learn one and gain advantage on the next action roll to investigate this environment. A PC with an appropriate background or Experience can learn an additional detail and ask a follow-up question about the scene and get a truthful (if not always complete) answer.
+> 	  - Traces of a battle (broken weapons and branches, gouges in the ground) litter the ground.
+> 	  - A moss-covered tree trunk is actually the corpse of a treant.
+> 	  - Still-standing trees are twisted in strange ways, as if by powerful magic.
+>   *Why did these groups come to blows? Why is the grove unused now?*
+> 
+
+
+
+
+
+
+markdownize_environment <- function(inpt, typ, num, tr) {
+  
+}
+
+
+
+
+###
+### NOT USED
+###
+process_env_feattxt_md <- function(feat_names, feat_types, feat_descs, feat_typidx, countdown_nbrs) {
+  df_ <- 
+    data.frame(
+      txt = 
+        vapply(1:length(feat_names), \(z) {
+          paste0("***",feat_names[i], " - ", feat_types[i], ":",  "*** ", feat_descs[i])
+        }, character(1L)),
+      idx = feat_typidx
+    )
+  
+  ###
+  ### DON'T FORGET QUESTIONS! SEE ABANDONED GROVE IN OBSIDIAN FOR STYLING REFERENCE
+  ###
+  
+  ### MAKE SURE INDICES STAY WITH THE EXACT FEATURE, NOT JUST THE FEATURE TYPE
+  list("features" = df_$txt[order(df_$idx)],
+       "countdowns" = countdown_nbrs[order(df_$idx)])
+}
