@@ -5,7 +5,7 @@ example_feature_descriptions <- c("Nothing to find in here",
                                   "Spend a Fear to initiate a Progress Countdown (4) and Consequence Countdown (5) and stuff",
                                   "Single countdown (loop 1d4) to spice things up",
                                   "A countdown (3) then a countdown(2) then a countdown (1)",
-                                  "A test consequence countdown (increasing 2)")
+                                  "A test consequence countdown (increasing 2) to become Hidden and Vulnerable, then Mark 2 Stress")
 
 # prelim countdown-processing functions ----------------------------------------
 count_countdown <- function(txt) {
@@ -117,7 +117,17 @@ process_countdowns <- function(feat_names, feat_descs) {
   
   # Daggerforge uses custom countdowns for increasing countdowns OR
   # there are more than 2 countdowns present for the feature
-  daggerforge_featdesc <- feat_descs
+  daggerforge_featdesc <- vapply(1:length(feat_descs), \(i) {
+    process_feat_txt(feat_descs[i]) |> embolden()
+  }, character(1L))
+    
+  markdown_featdesc <- vapply(1:length(daggerforge_featdesc), \(i) {
+    txt <- daggerforge_featdesc[i]
+    txt <- gsub("<b>|</b>", "**", txt)
+    txt <- gsub("<i>|</i>", "*", txt)
+    txt
+  }, character(1L))
+  
   daggerforge_ctdns <- vector("list", length(feat_descs))
   for (i in 1:length(ctdn_ct)) {
     if (ctdn_ct[[i]]$ctdn_ct > 1) {
@@ -129,14 +139,34 @@ process_countdowns <- function(feat_names, feat_descs) {
     }
   }
   
-  list("md_cd" = ctdn_mdp, "df_fd" = daggerforge_featdesc, "df_cd" = daggerforge_ctdns)
+  list("md_cd" = ctdn_mdp,
+       "md_fd" = markdown_featdesc,
+       "df_fd" = daggerforge_featdesc, 
+       "df_cd" = daggerforge_ctdns)
 }
-
-### ISSUE WITH EXAMPLE 4 COUNTDOWN 1
 
 x <- 
   process_countdowns(example_feature_names, example_feature_descriptions)
 
+# function to process feature text for Daggerforge/Markdown
+process_env_feattxt_md <- function(feat_names, feat_types, feat_descs, feat_typidx, countdown_nbrs) {
+  df_ <- 
+  data.frame(
+    txt = 
+      vapply(1:length(feat_names), \(z) {
+        paste0("***",feat_names[i], " - ", feat_types[i], ":",  "*** ", feat_descs[i])
+        }, character(1L)),
+    idx = feat_typidx
+  )
+  
+  ###
+  ### DON'T FORGET QUESTIONS! SEE ABANDONED GROVE IN OBSIDIAN FOR STYLING REFERENCE
+  ###
+  
+  ### MAKE SURE INDICES STAY WITH THE EXACT FEATURE, NOT JUST THE FEATURE TYPE
+  list("features" = df_$txt[order(df_$idx)],
+       "countdowns" = countdown_nbrs[order(df_$idx)])
+}
 
 
 ###
@@ -167,7 +197,7 @@ x <-
 
 ### TODO: MAKE SURE EXPORT UPDATES IF THE BUILDER CONTENT CHANGES
 
-list_env_features_obsdn.dgrfrg <- function(inpt, typ, num) {
+process_env_features <- function(inpt, typ, num) {
   # list Passives, then Actions, then Reactions...if feature text present
   
   feattypes_set <- reactive({
@@ -184,61 +214,136 @@ list_env_features_obsdn.dgrfrg <- function(inpt, typ, num) {
     }, character(1L))
   })
   
+  feat_types <- reactive({
+    vapply(1:5, \(i) {
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattype_", num))]]}
+    }, character(1L))
+  })
+  
   feat_descs <- reactive({
     vapply(1:5, \(i) {
       if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattext_", num))]]}
     }, character(1L))
   })
   
+  feat_qs <- reactive({
+    vapply(1:5, \(i) {
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featquestion_", num))]]}
+    }, character(1L))
+  })
+  
   countdown_processed_features <- process_countdowns(feat_names(), feat_descs())
   
-  ###
-  ### RESUME HERE ; countdown_processed_features IS A REACTIVE
-  ###
-  
-  feat_list0 <- reactive({
-    if (!all(feattypes_set() == 0)) {
-      x <- 
-        do.call(
-          what = rbind,
-          args = lapply(1:length(feattypes_set()), \(z){
-            data.frame(idx = z, typval = feattypes_set()[z],
-                       txt =)) })
-        )
-      x <- x[x$typval > 0,]
-      x <- x[order(x$typval),]
-      paste(x$txt, collapse = "<br>---<br>")
-    }
-  })
-  
-  feat_list <- reactive({
-    if (!is.null(feat_list0())) {
-      x1 <- strsplit(feat_list0(), split = "<br>---<br>")[[1]]
-      x2 <- 
-        lapply(1:length(x1), \(i) {
-          # need to trim the <b><i> and </i></b> wrapper around the {Feature Name} - {Feature Type} text
-          x1 <- sub("<b><i>", "", x1)
-          x1 <- sub("</i></b>", "", x1)
-          nm_ <- sub("^(.+)\\s*-.+$", "\\1", x1[i]) |> gsub(pattern = "^\\s*|\\s*$", replacement = "")
-          typ_ <- sub("^.+\\s*-\\s*(.+):.+$", "\\1", x1[i])
-          cst_ <- if (grepl("Mark a|[0-9]+ .tress | Spend a|[0-9]+ .ear", x1[i])) {
-            sub("^.+:\\s*<b>(.ark a .tress|.ark [0-9]+ .tress|Spend a .ear|Spend [0-9] .ear)</b>.+$", "\\1", x1[i])
-          }
-          rct_ <- 
-            if (is.null(cst_)) {sub("^.+:\\s*", "", x1[i])
-            } else {sub(paste0("^.+", cst_, "<*/*b*>*"), "", x1[i])} 
-          rct_ <- gsub("\\&lt;", "<", rct_)
-          rct_ <- gsub("\\&gt;", ">", rct_)
-          
-          list("name" = nm_, "type" = typ_, "cost" = cst_, "richContent" = rct_)
-        })
-      x2
-    } else {
-      list(list("name" = "", "type" = "", "cost" = "", "richContent" = ""))
-    }
-  })
-  feat_list()
+  list(
+    "feat_typeidx" = feattypes_set(),
+    "feat_names" = feat_names(),
+    "feat_types" = feat_types(),
+    "feat_processed_txt" = countdown_processed_features(),
+    "feat_qs" = feat_qs()
+  )
 }
+
+process_env_feats_df <- function(feat_list) {#feat_names, feat_types, feat_descs, feat_qs, feat_typidx, countdown_nbrs) {
+  # ADD PRELIMINARY 'CHECK IF NOT FULLY EMPTY/NULL' HERE?
+  
+  df_ <- 
+    data.frame(
+      nm = feat_list$feat_names,#feat_names,
+      typ = feat_list$feat_types,#feat_types,
+      desc = feat_list$feat_processed_txt$df_fd,#feat_descs,
+      idx = feat_list$feat_typeidx,#feat_typidx
+      qs = feat_list$feat_qs
+    )
+  
+  df_ <- df_[order(df_$idx),]
+  df_ <- df_[df_$idx > 0,]
+  
+  df_$cost <- vapply(1:nrow(df_), \(z) {
+    if (grepl("Spend a|[0-9]+ .ear", df_$desc[z])) {
+      paste0("\u0022",
+             sub("^.+:\\s*<b>(Spend a .ear|Spend [0-9] .ear)</b>.+$", "\\1", df_$desc[z]),
+             "\u0022,\n")
+    } else {NA_character_}
+  }, character(1L))
+  
+  df_$richContent <- vapply(1:nrow(df_), \(z) {
+    paste0("<div-class=\u005c\u0022df-p\u005c\u0022>",
+           if (is.na(df_$cost[i])) {df_$desc[z]
+           } else {sub(paste0("^.+", df_$cost[z], "<*/*b*>*"), "", df_$desc[z])},
+           "</div>\u0022,\n")
+  }, character(1L))
+  
+  df_$countdown_nbrs <- lapply(1:length(countdown_nbrs), \(z){countdown_nbrs[[z]]})
+  
+  countdowns <- lapply(1:nrow(df_), \(z) {
+    ctdn <- df_$countdown_nbrs[[z]]
+    
+    list_set <- 
+      if (!is.null(ctdn)) {
+        lapply(1:length(ctdn), \(y) {
+          c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
+        })
+      }
+  }) |> unlist(recursive = FALSE)
+  
+  df_$qstns <- lapply(1:nrow(df_), \(z) {
+    if (nchar(df_$qs[z]) > 0) {
+      strsplit(df_$qs[z], split = "\\?")[[1]] |> 
+        as.character() |> 
+        paste0("?") |> 
+        sub(pattern = "^ ", replacement = "")
+    }
+  })
+  
+  daggerforge_features <- 
+    lapply(1:nrow(df_), \(z) {
+      paste0("\u0009\u0009{\n", 
+             "\u0009\u0009\u0009\u0022name\u0022: \u0022", df_$nm[z], "\u0022,\n",
+             "\u0009\u0009\u0009\u0022type\u0022: \u0022", df_$typ[z], "\u0022,\n",
+             if (!is.na(df_$cost[z])){paste0("\u0009\u0009\u0009", df_$cost[z])},
+             "\u0009\u0009\u0009\u0022richContent\u0022: \u0022", df_$richContent[z], "\u0022,\n",
+             "\u0009\u0009\u0009\u0022questions\u0022: [",
+             if (!is.null(df_$qstns[[z]])) {
+               paste0(
+                 "\n",
+                 vapply(1:length(df_$qstns[[z]]), \(y) {
+                   paste0("\u0009\u0009\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
+                   }, character(1L)) |> paste(collapse = ",\n"),
+                 "\u0009\u0009\u0009]"
+                 )
+             } else {"]\n"},
+             "\u0009\u0009}"
+             )
+    }) |> paste(collapse = ",\n")
+  
+  daggerforge_features <- 
+    paste0("\u0009\u0022features\u0022: [\n", daggerforge_features, "\n\u0009]")
+    
+  # note: these are only 'manually processed' countdowns for cases where 1+
+  # features has 2+ countdowns
+  daggerforge_countdowns <- 
+    if (!is.null(countdowns)) {
+      paste0(
+        "\u0009\u0022countdowns\u0022: [\n",
+        vapply(1:length(countdowns), \(z) {
+          paste0(
+            "\u0009\u0009{\n",
+            "\u0009\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
+            "\u0009\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
+            "\u0009\u0009}"
+          )
+        }) |> 
+          paste(collapse = ",\n"),
+        "\u0009]\n"
+      )
+    }
+    
+    list("features" = daggerforge_features, "countdowns" = daggerforge_countdowns)
+}
+
+  ###
+  ### RESUME HERE
+  ###
 
 # function to create environment details list for export handling --------------
 build_env_export_list <- function(inpt, typ, num, tr, for_md = TRUE) {
