@@ -34,7 +34,7 @@ featurize_env <- function(type, num, detail_nbr, nm_val = "", ft_sel = NULL, dsc
 
 numerify_env <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "80px", inpwd = NULL) {
   df__ <- df_[df_$tier == tier,]
-  div(title = "Baseline value presented; lower/raise by 3 for baseline of next lower/higher tier", 
+  div(title = "Baseline value presented; subtract/add 3 for baseline of next lower/higher tier", 
       style = paste0("width: ", divwd),
       numericInput(inputId = namify(type, nbr, detail),
                    label = lbltxt,

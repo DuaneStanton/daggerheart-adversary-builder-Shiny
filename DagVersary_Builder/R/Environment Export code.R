@@ -197,25 +197,25 @@ process_env_features <- function(inpt, typ, num) {
   
   feat_names <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featname_", num))]]}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featname_", num))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_types <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattype_", num))]]}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattype_", num))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_descs <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattext_", num))]]}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattext_", num))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_qs <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featquestion_", num))]]}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featquestion_", num))]]} else {NA_character_}
     }, character(1L))
   })
   
@@ -225,7 +225,7 @@ process_env_features <- function(inpt, typ, num) {
     "feat_typeidx" = feattypes_set(),
     "feat_names" = feat_names(),
     "feat_types" = feat_types(),
-    "feat_processed_txt" = countdown_processed_features(),
+    "feat_processed_txt" = countdown_processed_features,
     "feat_qs" = feat_qs()
   )
 }
@@ -271,7 +271,8 @@ process_env_feats_df <- function(feat_list) {
           c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
         })
       }
-  }) |> unlist(recursive = FALSE)
+    list_set
+  })
   
   df_$qstns <- lapply(1:nrow(df_), \(z) {
     if (nchar(df_$qs[z]) > 0) {
@@ -296,7 +297,7 @@ process_env_feats_df <- function(feat_list) {
                  vapply(1:length(df_$qstns[[z]]), \(y) {
                    paste0("\u0009\u0009\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
                    }, character(1L)) |> paste(collapse = ",\n"),
-                 "\u0009\u0009\u0009]"
+                 "\n\u0009\u0009\u0009]"
                  )
              } else {"]\n"},
              "\u0009\u0009}"
@@ -319,20 +320,16 @@ process_env_feats_df <- function(feat_list) {
             "\u0009\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
             "\u0009\u0009}"
           )
-        }) |> 
+        }, character(1L)) |> 
           paste(collapse = ",\n"),
-        "\u0009]\n"
+        "\n\u0009]\n"
       )
     }
     
     list("features" = daggerforge_features, "countdowns" = daggerforge_countdowns)
 }
 
-  ###
-  ### RESUME HERE
-  ###
-
-jsonify_environment <- function(inpt, typ, num, tr) {
+jsonify_environment <- function(inpt, typ, num) {
   features_countdowns <- 
     process_env_features(inpt, typ, num) |> 
     process_env_feats_df()
@@ -343,13 +340,12 @@ jsonify_environment <- function(inpt, typ, num, tr) {
          "\u0022,\n",
          "\u0009\u0022name\u0022: \u0022", inpt[[namify(typ, num, "name")]], "\u0022,\n",
          "\u0009\u0022tier\u0022: \u0022", inpt[["env_tier"]], "\u0022,\n",
+         "\u0009\u0022type\u0022: \u0022", typ, "\u0022,\n",
          "\u0009\u0022desc\u0022: \u0022", inpt[[namify(typ, num, "desc")]], "\u0022,\n",
          "\u0009\u0022impulse\u0022: \u0022", inpt[[namify(typ, num, "impulses")]], "\u0022,\n",
          "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
-         "\u0009\u002potentialAdversaries\u0022: \u0022", inpt[[namify(typ, num, "ptntl_adv")]], "\u0022,\n",
-         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
+         "\u0009\u0022potentialAdversaries\u0022: \u0022", inpt[[namify(typ, num, "ptntl_adv")]], "\u0022,\n",
          "\u0009\u0022source\u0022: \u0022custom\u0022,\n",
-         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
          features_countdowns$features,
          if (!is.null(features_countdowns$countdowns)) {
            paste0(",\n", features_countdowns$countdowns)
@@ -357,56 +353,47 @@ jsonify_environment <- function(inpt, typ, num, tr) {
          )
 }
 
-
-###
-### NOT USED
-###
-# function to create environment details list for export handling --------------
-build_env_export_list <- function(inpt, typ, num, tr, for_md = TRUE) {
-  feat_names <- x
-  feat_descs <- y
-  
-  
-  countdown_processed_features <- process_countdowns(feat_names, feat_descs) 
-  
-  
-  
-  ### BELOW HERE ONLY FOR REFERENCE
-  list(
-    id = paste0("Dagversary_a", paste("a", sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
-    "name" = paste0(inpt[[namify(typ, num, "name")]]),
-    "tier" = .,
-    "type" = .,
-    "desc" = .,
-    "impulse" = .,
-    "difficulty" = .,
-    "potentialAdversaries" = .,
-    "source" = "custom",
-    "features" = 
-      list(
-        "name" = .,
-        "type" = .,
-        "cost" = ., # ONLY PRESENT IF FEATURE STARTS WITH "Spend a Fear" ...NEED TO PROCESS TO ACCOUNT FOR THIS
-        "richContent" = .,
-        "questions" = c()
-      ),
-    "countdowns" = # ONLY PRESENT WHEN PROCESSING-INTRODUCED COUNTDOWNS OUTSIDE THE FEATURE richContent
-      list(
-        "name" = .,
-        "max" = .
-      )
+jsonify_env <- function(e_l) {
+  paste0(
+    "{\n",
+    "\u0022environments\u0022: [\n",
+    paste(e_l, collapse = ",\n"),
+    "\n  ]\n",
+    "}"
   )
 }
-
-
-
 
 # ITS Theme (markdown) export processing =======================================
 markdownize_countdown <- function(countdown_name_max_vec_list) {
   cnmvl <- countdown_name_max_vec_list
+  
+  if (length(cnmvl) > 0L) {
+    cntdns <- 
+      vapply(1:length(cnmvl), \(z){
+        paste0("> | ", cnmvl[[z]][["name"]], " | ", 
+               paste(rep("<input type = 'checkbox' unchecked/>", cnmvl[[z]][["max"]]), collapse = " "), " |")
+      }, character(1L)) |> paste(collapse = "\n") |> paste0("\n>\n")
+    
+    paste0("> ###### Countdowns\n",
+           "> | Name | Count |\n",
+           "> |:-|:-|\n",
+           cntdns)
+  }
 }
 
-# general structure:
+markdownize_features <- function(feature_df) {
+  paste0("> ###### Features",
+         vapply(1:nrow(feature_df), \(z) {
+           paste0("> - ", feature_df$feat[z], "\n",
+                  if (!is.null(feature_df$qstns[[z]])) {
+                    vapply(1:length(feature_df$qstns[[z]]), \(y) {
+                      paste0("> *", feature_df$qstns[[z]][y], "*\n")
+                    }, character(1L)) |> paste(collapse = "\n")
+                  })
+         }, character(1L)) |> paste(collapse = "\n>\n")
+         )
+}
+
 
 process_env_feats_md <- function(feat_list) {
   # ADD PRELIMINARY 'CHECK IF NOT FULLY EMPTY/NULL' HERE?
@@ -427,8 +414,6 @@ process_env_feats_md <- function(feat_list) {
   
   df_$feat <- paste0("***", df_$nm, " - ", df_$typ, ":*** ", df_$desc)
   
-  
-  
   countdowns <- lapply(1:nrow(df_), \(z) {
     ctdn <- df_$countdown_nbrs[[z]]
     
@@ -438,14 +423,8 @@ process_env_feats_md <- function(feat_list) {
           c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
         })
       }
-  }) |> unlist(recursive = FALSE)
-  ###
-  ### output structure: list(c("name" = ..., "max" = ...), c("name" = ..., "max" = ...), ...)
-  ###
-  
-  ###
-  ### BELOW HERE ONLY FOR REFERENCE
-  ###
+    list_set
+  }) 
   
   df_$qstns <- lapply(1:nrow(df_), \(z) {
     if (nchar(df_$qs[z]) > 0) {
@@ -456,109 +435,23 @@ process_env_feats_md <- function(feat_list) {
     }
   })
   
-  daggerforge_features <- 
-    lapply(1:nrow(df_), \(z) {
-      paste0("\u0009\u0009{\n", 
-             "\u0009\u0009\u0009\u0022name\u0022: \u0022", df_$nm[z], "\u0022,\n",
-             "\u0009\u0009\u0009\u0022type\u0022: \u0022", df_$typ[z], "\u0022,\n",
-             if (!is.na(df_$cost[z])){paste0("\u0009\u0009\u0009", df_$cost[z])},
-             "\u0009\u0009\u0009\u0022richContent\u0022: \u0022", df_$richContent[z], "\u0022,\n",
-             "\u0009\u0009\u0009\u0022questions\u0022: [",
-             if (!is.null(df_$qstns[[z]])) {
-               paste0(
-                 "\n",
-                 vapply(1:length(df_$qstns[[z]]), \(y) {
-                   paste0("\u0009\u0009\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
-                 }, character(1L)) |> paste(collapse = ",\n"),
-                 "\u0009\u0009\u0009]"
-               )
-             } else {"]\n"},
-             "\u0009\u0009}"
-      )
-    }) |> paste(collapse = ",\n")
+  markdown_countdowns <- markdownize_countdown(countdowns)
+  markdown_features <- markdownize_features(df_)
   
-  daggerforge_features <- 
-    paste0("\u0009\u0022features\u0022: [\n", daggerforge_features, "\n\u0009]")
-  
-  # note: these are only 'manually processed' countdowns for cases where 1+
-  # features has 2+ countdowns
-  daggerforge_countdowns <- 
-    if (!is.null(countdowns)) {
-      paste0(
-        "\u0009\u0022countdowns\u0022: [\n",
-        vapply(1:length(countdowns), \(z) {
-          paste0(
-            "\u0009\u0009{\n",
-            "\u0009\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
-            "\u0009\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
-            "\u0009\u0009}"
-          )
-        }) |> 
-          paste(collapse = ",\n"),
-        "\u0009]\n"
-      )
-    }
-  
-  list("features" = daggerforge_features, "countdowns" = daggerforge_countdowns)
+  list("countdowns" = markdown_countdowns, "features" = markdown_features)
 }
-
-
-
-
-
-process_env_feats_md <- function() {
+ 
+markdownize_environment <- function(inpt, typ, num) {
+  features_countdowns <- 
+    process_env_features(inpt, typ, num) |> 
+    process_env_feats_md()
   
-}
-
-process_env_countdowns_md <- function() {
-  
-}
-
-
-> [!infobox| background-purple wfull]+
-> # Abandoned Grove (tier 1 Exploration)
-> *A former druidic grove lying fallow and fully reclaimed by nature*
-> **Impulses:** Draw in the curious, echo the past
-> Difficulty: 11
-> Potential Adversaries: Beasts (Bear, Dire Wolf, Glass Snake), Grove Guardians (Minor Treant, Sylvan Soldier, Young Dryad)
-> ###### Features
-> - ***Overgrown Battlefield - Passive:*** There has been a battle here. A PC can make an Instinct Roll to identify evidence of that fight. On a success with Hope, learn all three pieces of information below. On a success with Fear, learn two. On a failure, a PC can mark a Stress to learn one and gain advantage on the next action roll to investigate this environment. A PC with an appropriate background or Experience can learn an additional detail and ask a follow-up question about the scene and get a truthful (if not always complete) answer.
-> 	  - Traces of a battle (broken weapons and branches, gouges in the ground) litter the ground.
-> 	  - A moss-covered tree trunk is actually the corpse of a treant.
-> 	  - Still-standing trees are twisted in strange ways, as if by powerful magic.
->   *Why did these groups come to blows? Why is the grove unused now?*
-> 
-
-
-
-
-
-
-markdownize_environment <- function(inpt, typ, num, tr) {
-  
-}
-
-
-
-
-###
-### NOT USED
-###
-process_env_feattxt_md <- function(feat_names, feat_types, feat_descs, feat_typidx, countdown_nbrs) {
-  df_ <- 
-    data.frame(
-      txt = 
-        vapply(1:length(feat_names), \(z) {
-          paste0("***",feat_names[i], " - ", feat_types[i], ":",  "*** ", feat_descs[i])
-        }, character(1L)),
-      idx = feat_typidx
-    )
-  
-  ###
-  ### DON'T FORGET QUESTIONS! SEE ABANDONED GROVE IN OBSIDIAN FOR STYLING REFERENCE
-  ###
-  
-  ### MAKE SURE INDICES STAY WITH THE EXACT FEATURE, NOT JUST THE FEATURE TYPE
-  list("features" = df_$txt[order(df_$idx)],
-       "countdowns" = countdown_nbrs[order(df_$idx)])
+  paste0("> [!infobox| background-purple wfull]+\n",
+         "> #", inpt[[namify(typ, num, "name")]], " (tier ", inpt[["env_tier"]], " ", typ, ")\n",
+         "> *", inpt[[namify(typ, num, "desc")]], "*\n",
+         "> **Impulses:** ", inpt[[namify(typ, num, "impulses")]], "\n",
+         "> Difficulty: ", inpt[[namify(typ, num, "diff")]], "\n",
+         "> Potential Adversaries: ", inpt[[namify(typ, num, "ptntl_adv")]], "\n",
+         features_countdowns$countdowns,
+         features_countdowns$features)
 }

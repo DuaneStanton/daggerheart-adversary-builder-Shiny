@@ -17,7 +17,8 @@ source("R/Customize section code.R")
 source("R/Run section code.R")
 source("R/Obsidian_Daggerforge code.R")
 source("R/Obsidian_ITS Theme code.R")
-source("R/Environment Builder section code.R")
+source("R/Environment Builder code.R")
+source("R/Environment Export code.R")
 
 # Define UI ====================================================================
 ui <- fluidPage(
@@ -105,6 +106,18 @@ ui <- fluidPage(
       color: #e0c34c;
       font-size: 18px;
     }
+    #json_dl_env {
+      background-color: #53386b;
+      border-color: #320e45;
+      color: #e0c34c;
+      font-size: 18px;
+    }
+    #markdown_dl_env {
+      background-color: #53386b;
+      border-color: #320e45;
+      color: #e0c34c;
+      font-size: 18px;
+    }
     table.dataTable.display tbody tr.odd { 
       background-color: #f7e9ab;
     }
@@ -148,20 +161,22 @@ ui <- fluidPage(
                        div(h4("Use this panel to run adversaries in-app from the 'Customize' tab")),
                        div(uiOutput("adv_run"))
               ), 
-              tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
-                       div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
-                       htmlOutput("dgrfg_colossus_note"),
-                       downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
-                       div(h4("The downloaded .json will look like the below:")),
-                       verbatimTextOutput(outputId = "json_dl_prvw")
+              tabPanel(div("Adversary Export", style = "font-size: 16px; color: #e8d37d;"),
+                       tabsetPanel(
+                         tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
+                                  div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running adversaries there. First build adversaries using details from the 'Customize' tab. You -may- need to close and reopen Obsidian after uploading to access newly-added adversaries, which will be available in the 'Custom' category of the 'Source' filter.")),
+                                  htmlOutput("dgrfg_colossus_note"),
+                                  downloadButton("json_dl", label = "Download JSON file for Daggerforge"),
+                                  div(h4("The downloaded .json will look like the below:")),
+                                  verbatimTextOutput(outputId = "json_dl_prvw") ),
+                         tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
+                                  div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
+                                  div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
+                                  downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
+                                  div(h4("The downloaded .txt file will look like the below:")),
+                                  verbatimTextOutput(outputId = "mkdn_txt_dl_prvw") )
+                       )
               ), 
-              tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
-                       div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running adversaries there and you have the ITS Theme set up. First build adversaries using details from the 'Customize' tab.")),
-                       div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
-                       downloadButton("markdown_dl", label = "Download text file of Markdown for copy-pasting to Obsidian"),
-                       div(h4("The downloaded .txt file will look like the below:")),
-                       verbatimTextOutput(outputId = "mkdn_txt_dl_prvw")
-              ),
               tabPanel(div("Feature Table", style = "font-size: 16px; color: #e8d37d;"),
                        div(h4("Lookup table of features for adversaries - customize as you see fit!")),
                        div(uiOutput("feat_tbl_msg")),
@@ -174,13 +189,29 @@ ui <- fluidPage(
                        div("Note: Updating the environment tier / type count will reset the entry fields; it's better to complete your work for in-progress evironments if you decide to change things.", style = "font-size: 16px; color: darkblue"),
                        selectInput("env_tier", "Select environment tier", choices = tier_vals, 
                                    selected = 1, multiple = FALSE, width = "180px"),
-                       uiOutput("env_notes"),
-                       uiOutput("env_counts", label = "Specify the # of environments by type"),
-                       uiOutput("env_spec"),
-                       "MORE HERE"),
+                       tabsetPanel(
+                         tabPanel(div("Counts by Type", style = "font-size: 16px; color: #e8d37d;"), 
+                                  uiOutput("env_counts", label = "Specify the # of environments by type")),
+                         tabPanel(div("Notes", style = "font-size: 16px; color: #e8d37d;"),
+                                  uiOutput("env_notes")),
+                         tabPanel(div("Customize", style = "font-size: 16px; color: #e8d37d;"), 
+                                  uiOutput("env_spec")) )
+                       ),
               tabPanel(div("Environment Export", style = "font-size: 16px; color: #e8d37d;"),
                        div(h4("Export created environment(s) as either a JSON or text file intended for use in Obsidian")),
-                       "MORE HERE"),
+                       tabsetPanel(
+                         tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
+                                  div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running environments there. You -may- need to close and reopen Obsidian after uploading to access newly-added environments, which will be available in the 'Custom' category of the 'Source' filter.")),
+                                  downloadButton("json_dl_env", label = "Download JSON file for Daggerforge"),
+                                  div(h4("The downloaded .json will look like the below:")),
+                                  verbatimTextOutput(outputId = "json_dl_prvw_env")),
+                         tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
+                                  div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running environments there and you have the ITS Theme set up.")),
+                                  div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
+                                  downloadButton("markdown_dl_env", label = "Download text file of Markdown for copy-pasting to Obsidian"),
+                                  div(h4("The downloaded .txt file will look like the below:")),
+                                  verbatimTextOutput(outputId = "mkdn_txt_dl_prvw_env")) )
+                       ),
               tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
                        htmlOutput("sources")
               )
@@ -559,7 +590,8 @@ server <- function(input, output, session) {
       })
     })
   
-  # server Obsidian - Daggerforge panel ----------------------------------------
+  # server Adversary Export panel ----------------------------------------------
+  # Obsidian - Daggerforge subpanel --------------------------------------------
   json_file <- reactive({
     req(cstm_chk() == 0L)
     
@@ -593,8 +625,7 @@ server <- function(input, output, session) {
       }
     })
   
-  # server Obsidian - ITS Theme panel ------------------------------------------
-  
+  # Obsidian - ITS Theme subpanel ----------------------------------------------
   markdown_file <- reactive({
     req(cstm_chk() == 0L)
     
@@ -675,17 +706,17 @@ server <- function(input, output, session) {
   output$env_notes <- renderUI({
     div(HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
                "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>",
-               "<br>Special wording considerations for countdowns in feature text:",
+               "<br><br>Special wording considerations for countdowns in feature text:",
                "<br>- Please use only one countdown in a feature OR a paired Progress/Consequence countdown using fixed numbers in a single feature; Daggerforge processing will not automatically recognize and include the second countdown in a feature and this program only accounts for paired Progress/Consequence countdowns of type 'countdown (single #).",
                "<br>- Always use 'Countdown (#*)' for feature description text, where the '#*' element can use the following options as noted below:",
                "<br>- An actual number (e.g. 'Countdown (4)')",
                "<br>- A number with a modifying word 'loop', 'increasing', or 'decreasing' before the number (e.g. 'Countdown (loop 4)'",
                "<br>- A dice indicator for randomized countdowns (e.g. 'Countdown (1d4)'); a loop modifier can be applied (e.g. 'Countdown (loop 1d4)')",
-               "<br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which.",
+               "<br><br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which.",
                "<br>- When there are -multiple- countdowns in a single feature, the exported environment text for the Daggerforge JSON will intentionally replace the word 'Countdown' with 'Ctdown' as the JSON will create standalone countdown entries for the multiples; default Daggerforge processing may not capture both countdowns using the initial text and the 'intentional typo' will prevent the default processing from duplicating the countdowns.",
                "<br>- Note that because Daggerforge and ITS Theme countdown UI don't currently support automated increases to the counter maximum, an <i>increasing</i> countdown will have have 5 additional counter slots to provide some buffer counters.",
                "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'.")),
-        style = "font-size: 16px; color: darkblue;")
+        style = "font-size: 16px;")
   })
   
   output$env_counts <- renderUI({
@@ -727,7 +758,38 @@ server <- function(input, output, session) {
       })
     })
   
+  env_runset <- reactive({
+    req(min(active_env_ct_vec()) > 0)
+
+    lapply(1:length(active_env_ct_vec()), \(z) {
+          paste0(names(active_env_ct_vec())[z], "_", 1:(active_env_ct_vec()[z]))
+        }) |> unlist(recursive = FALSE)
+    })
+  
   # server Environment Export panel --------------------------------------------
+  # Obsidian - Daggerforge subpanel --------------------------------------------
+  ###
+  ### NEEDS WORK
+  ###
+  json_file_env <- reactive({
+    req(env_runset())
+    
+    lapply(1:length(env_runset()), \(i) {
+      jsonify_environment(input, a.t(env_runset()[i]), a.n(env_runset()[i])) # note: a.t and a.n originally built for adveraries, but exact same structure/functionality works for enviroment details
+    }) |> 
+      jsonify_env()
+  })
+  
+  output$json_dl_env <- downloadHandler(
+    filename = function() {
+      paste0("daggerforge_dagversary_env-", format(Sys.time(), "%d-%b-%Y %Hh %Mm %Z"), ".json")
+    },
+    content = function(file) {
+      cat(json_file_env(), file = file)
+    }
+  )
+  
+  output$json_dl_prvw_env <- renderText({ json_file_env() })
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
