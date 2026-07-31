@@ -185,12 +185,13 @@ ui <- fluidPage(
                        htmlOutput("dynam_feat_notes")
               ),
               tabPanel(div("Environment Builder", style = "font-size: 16px; color: #e8d37d;"),
-                       div(h4("Template for creating an exporting environments for session use")),
+                       div(h4("Template for exportable environments for session use")),
                        div("Note: Updating the environment tier / type count will reset the entry fields; it's better to complete your work for in-progress evironments if you decide to change things.", style = "font-size: 16px; color: darkblue"),
                        selectInput("env_tier", "Select environment tier", choices = tier_vals, 
                                    selected = 1, multiple = FALSE, width = "180px"),
                        tabsetPanel(
                          tabPanel(div("Counts by Type", style = "font-size: 16px; color: #e8d37d;"), 
+                                  uiOutput("env_note1"),
                                   uiOutput("env_counts", label = "Specify the # of environments by type")),
                          tabPanel(div("Notes", style = "font-size: 16px; color: #e8d37d;"),
                                   uiOutput("env_notes")),
@@ -706,9 +707,16 @@ server <- function(input, output, session) {
   output$env_notes <- renderUI({
     div(HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
                "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>",
-               "<br><br>Special wording considerations for countdowns in feature text:",
-               "<br>- Please use only one countdown in a feature OR a paired Progress/Consequence countdown using fixed numbers in a single feature; Daggerforge processing will not automatically recognize and include the second countdown in a feature and this program only accounts for paired Progress/Consequence countdowns of type 'countdown (single #).",
-               "<br>- Always use 'Countdown (#*)' for feature description text, where the '#*' element can use the following options as noted below:",
+               "<br><h4>Feature elements to consider</h4>",
+               "Environment features often involve one or more of the following:",
+               "<br><i>h/t RightKnightToFight's guide - see 'Credits' tab</i>",
+               "<br>- Something (or things) for the party to interact with (possibly leading to an Action Roll, or simply setting the stage)",
+               "<br>- Summoning or directly presenting a threat or challenge, including dealing damage/stress",
+               "<br>- Alter the environment/scene (react to the party, signal a threat, take away or change opportunity)",
+               "<br>- Provide context/set the tone for the environment",
+               "<br><br><h4>Countdowns: wording in feature text</h4>",
+               "- Please use only one countdown in a feature OR a paired Progress/Consequence countdown using fixed numbers in a single feature; Daggerforge processing will not automatically recognize and include the second countdown in a feature and this program only accounts for paired Progress/Consequence countdowns of type 'countdown (single #).",
+               "<br>- Always use 'Countdown (#*)' for feature description text, where the '#*' element can use one of the following options:",
                "<br>- An actual number (e.g. 'Countdown (4)')",
                "<br>- A number with a modifying word 'loop', 'increasing', or 'decreasing' before the number (e.g. 'Countdown (loop 4)'",
                "<br>- A dice indicator for randomized countdowns (e.g. 'Countdown (1d4)'); a loop modifier can be applied (e.g. 'Countdown (loop 1d4)')",
@@ -717,6 +725,15 @@ server <- function(input, output, session) {
                "<br>- Note that because Daggerforge and ITS Theme countdown UI don't currently support automated increases to the counter maximum, an <i>increasing</i> countdown will have have 5 additional counter slots to provide some buffer counters.",
                "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'.")),
         style = "font-size: 16px;")
+  })
+  
+  output$env_note1 <- renderUI({
+    HTML(
+      paste0(
+        "<h4>Select the number of each type of environment below, then fill in details in the 'Customize' tab before exporting.</h4>",
+        "<h4>See the 'Notes' tab for more details about environment features and countdowns.</h4>"
+      )
+    )
   })
   
   output$env_counts <- renderUI({
@@ -768,9 +785,6 @@ server <- function(input, output, session) {
   
   # server Environment Export panel --------------------------------------------
   # Obsidian - Daggerforge subpanel --------------------------------------------
-  ###
-  ### NEEDS WORK
-  ###
   json_file_env <- reactive({
     req(env_runset())
     

@@ -78,7 +78,7 @@ typify_countdown <- function(count_countdown_output) {
 
 extract_ctdn_nbrs <- function(txt) {
   val <-  sub(".+countdown\\s*\\((.+)\\)", "\\1", tolower(txt))
-  inc <- grepl("increasing", tolower(txt))
+  inc <- grepl("increasing", tolower(val)) ### THIS NEEDS WORK
   
   if (!grepl("[:alpha:]", val)) {
     nbr <- as.numeric(val)
@@ -141,6 +141,10 @@ process_countdowns <- function(feat_names, feat_descs) {
   daggerforge_ctdns <- vector("list", length(feat_descs))
   for (i in 1:length(ctdn_ct)) {
     if (ctdn_ct[[i]]$ctdn_ct > 1) {
+      ###
+      ### NEEDS WORK: gsub WORKS, BUT NOT CURRENTLY ADDING MANUAL COUNTDOWNS DOWNSTREAM
+      ### ALSO: NEED TO APPLY WORKING FORM OF THIS FOR A SOLO INCREASING COUNTDOWN TOO
+      ###
       # abbreviate 'Countdown' or 'countdown' to 'Ctdown' or 'ctdown' so Daggerforge doesn't
       # auto-populate (only first) countdown for multi-countdown features
       # ..these will have processing-introduced countdowns
@@ -184,6 +188,9 @@ process_countdowns <- function(feat_names, feat_descs) {
 
 ### TODO: MAKE SURE EXPORT UPDATES IF THE BUILDER CONTENT CHANGES
 
+###
+### NEED SOMETHING LIKE auto_feat_ct (list_features_obsdn.dgrfrg) TO FORCE UPDATES HERE
+###
 process_env_features <- function(inpt, typ, num) {
   # list Passives, then Actions, then Reactions...if feature text present
   
@@ -197,25 +204,25 @@ process_env_features <- function(inpt, typ, num) {
   
   feat_names <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featname_", num))]]} else {NA_character_}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featname_", i))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_types <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattype_", num))]]} else {NA_character_}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattype_", i))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_descs <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattext_", num))]]} else {NA_character_}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("feattext_", i))]]} else {NA_character_}
     }, character(1L))
   })
   
   feat_qs <- reactive({
     vapply(1:5, \(i) {
-      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featquestion_", num))]]} else {NA_character_}
+      if (feattypes_set()[i] > 0) {inpt[[namify(typ, num, paste0("featquestion_", i))]]} else {NA_character_}
     }, character(1L))
   })
   
@@ -242,24 +249,32 @@ process_env_feats_df <- function(feat_list) {
       qs = feat_list$feat_qs
     )
   
-  df_$countdown_nbrs <- lapply(1:nrow(df_), \(z){feat_list$df_cd[[z]]})
+  ###
+  ### EITHER HERE OR FURTHER DOWN NEEDS CORRECTION
+  ###
+  df_$countdown_nbrs <- lapply(1:nrow(df_), \(z){feat_list$feat_processed_txt$df_cd[[z]]})
   
   df_ <- df_[order(df_$idx),]
   df_ <- df_[df_$idx > 0,]
   
+  df_$desc <- gsub("<b>|</b>", "", df_$desc)
+  
   df_$cost <- vapply(1:nrow(df_), \(z) {
-    if (grepl("Spend a|[0-9]+ .ear", df_$desc[z])) {
+    if (grepl("^.pend a|[0-9]+ .ear", df_$desc[z])) {
       paste0("\u0022",
-             sub("^.+:\\s*<b>(Spend a .ear|Spend [0-9] .ear)</b>.+$", "\\1", df_$desc[z]),
-             "\u0022,\n")
+             sub("^(.pend a .ear|.pend [0-9] .ear).+$", "\\1", df_$desc[z]))
     } else {NA_character_}
   }, character(1L))
+  
+  df_$desc <- 
+    gsub("^(.pend a .ear|.pend [0-9] .ear)", "", df_$desc) |> 
+    gsub(pattern = "^ ", replacement = "")
   
   df_$richContent <- vapply(1:nrow(df_), \(z) {
     paste0("<div-class=\u005c\u0022df-p\u005c\u0022>",
            if (is.na(df_$cost[i])) {df_$desc[z]
            } else {sub(paste0("^.+", df_$cost[z], "<*/*b*>*"), "", df_$desc[z])},
-           "</div>\u0022,\n")
+           "</div>")
   }, character(1L))
   
   countdowns <- lapply(1:nrow(df_), \(z) {
@@ -285,47 +300,47 @@ process_env_feats_df <- function(feat_list) {
   
   daggerforge_features <- 
     lapply(1:nrow(df_), \(z) {
-      paste0("\u0009\u0009{\n", 
-             "\u0009\u0009\u0009\u0022name\u0022: \u0022", df_$nm[z], "\u0022,\n",
-             "\u0009\u0009\u0009\u0022type\u0022: \u0022", df_$typ[z], "\u0022,\n",
-             if (!is.na(df_$cost[z])){paste0("\u0009\u0009\u0009", df_$cost[z])},
-             "\u0009\u0009\u0009\u0022richContent\u0022: \u0022", df_$richContent[z], "\u0022,\n",
-             "\u0009\u0009\u0009\u0022questions\u0022: [",
+      paste0("\u0009{\n", 
+             "\u0009\u0022name\u0022: \u0022", df_$nm[z], "\u0022,\n",
+             "\u0009\u0022type\u0022: \u0022", df_$typ[z], "\u0022,\n",
+             if (!is.na(df_$cost[z])){paste0("\u0009\u0022cost\u022: ", df_$cost[z], "\u0022,\n")},
+             "\u0009\u0022richContent\u0022: \u0022", df_$richContent[z], "\u0022,\n",
+             "\u0009\u0022questions\u0022: [",
              if (!is.null(df_$qstns[[z]])) {
                paste0(
                  "\n",
                  vapply(1:length(df_$qstns[[z]]), \(y) {
-                   paste0("\u0009\u0009\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
+                   paste0("\u0009\u0009\u0022", df_$qstns[[z]][y], "\u0022")
                    }, character(1L)) |> paste(collapse = ",\n"),
-                 "\n\u0009\u0009\u0009]"
+                 "\n\u0009\u0009]\n"
                  )
              } else {"]\n"},
-             "\u0009\u0009}"
+             "\u0009}"
              )
     }) |> paste(collapse = ",\n")
   
   daggerforge_features <- 
-    paste0("\u0009\u0022features\u0022: [\n", daggerforge_features, "\n\u0009]")
+    paste0("\u0022features\u0022: [\n", daggerforge_features, "\n\u0009]")
     
   # note: these are only 'manually processed' countdowns for cases where 1+
   # features has 2+ countdowns
   daggerforge_countdowns <- 
-    if (!is.null(countdowns)) {
+    if (!is.null(countdowns[[1]])) {
       paste0(
-        "\u0009\u0022countdowns\u0022: [\n",
+        "\u0022countdowns\u0022: [\n",
         vapply(1:length(countdowns), \(z) {
           paste0(
-            "\u0009\u0009{\n",
-            "\u0009\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
-            "\u0009\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
-            "\u0009\u0009}"
+            "\u0009{\n",
+            "\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
+            "\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
+            "\u0009}"
           )
         }, character(1L)) |> 
           paste(collapse = ",\n"),
         "\n\u0009]\n"
       )
     }
-    
+  
     list("features" = daggerforge_features, "countdowns" = daggerforge_countdowns)
 }
 
@@ -335,21 +350,21 @@ jsonify_environment <- function(inpt, typ, num) {
     process_env_feats_df()
   
   paste0("{\n",
-         "\u0009\u0022id\u0022: \u0022", 
+         "\u0022id\u0022: \u0022", 
          paste0("Dagversary_e", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
          "\u0022,\n",
-         "\u0009\u0022name\u0022: \u0022", inpt[[namify(typ, num, "name")]], "\u0022,\n",
-         "\u0009\u0022tier\u0022: \u0022", inpt[["env_tier"]], "\u0022,\n",
-         "\u0009\u0022type\u0022: \u0022", typ, "\u0022,\n",
-         "\u0009\u0022desc\u0022: \u0022", inpt[[namify(typ, num, "desc")]], "\u0022,\n",
-         "\u0009\u0022impulse\u0022: \u0022", inpt[[namify(typ, num, "impulses")]], "\u0022,\n",
-         "\u0009\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
-         "\u0009\u0022potentialAdversaries\u0022: \u0022", inpt[[namify(typ, num, "ptntl_adv")]], "\u0022,\n",
-         "\u0009\u0022source\u0022: \u0022custom\u0022,\n",
+         "\u0022name\u0022: \u0022", inpt[[namify(typ, num, "name")]], "\u0022,\n",
+         "\u0022tier\u0022: \u0022", inpt[["env_tier"]], "\u0022,\n",
+         "\u0022type\u0022: \u0022", typ, "\u0022,\n",
+         "\u0022desc\u0022: \u0022", inpt[[namify(typ, num, "desc")]], "\u0022,\n",
+         "\u0022impulse\u0022: \u0022", inpt[[namify(typ, num, "impulses")]], "\u0022,\n",
+         "\u0022difficulty\u0022: \u0022", inpt[[namify(typ, num, "diff")]], "\u0022,\n",
+         "\u0022potentialAdversaries\u0022: \u0022", inpt[[namify(typ, num, "ptntl_adv")]], "\u0022,\n",
+         "\u0022source\u0022: \u0022custom\u0022,\n",
          features_countdowns$features,
          if (!is.null(features_countdowns$countdowns)) {
            paste0(",\n", features_countdowns$countdowns)
-         }
+         } else {"\n"}
          )
 }
 
@@ -357,8 +372,8 @@ jsonify_env <- function(e_l) {
   paste0(
     "{\n",
     "\u0022environments\u0022: [\n",
-    paste(e_l, collapse = ",\n"),
-    "\n  ]\n",
+    paste(e_l, collapse = "},\n"),
+    "}\n]\n",
     "}"
   )
 }
