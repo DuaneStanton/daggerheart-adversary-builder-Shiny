@@ -1,18 +1,20 @@
 # code for Obsidian - Daggerforge and Obsidian - ITS Theme environments export
 
 # example_feature_names <- c("Thing The First", "Second Thing", "Three's The Charm", "Dark side of the fourth", "Five on it")
-# example_feature_descriptions <- c("Nothing to find in here", 
+# example_feature_descriptions <- c("Nothing to find in here",
 #                                   "Spend a Fear to initiate a Progress Countdown (4) and Consequence Countdown (5) and stuff",
 #                                   "Single countdown (loop 1d4) to spice things up",
 #                                   "A countdown (3) then a countdown(2) then a countdown (1)",
 #                                   "A test consequence countdown (increasing 2) to become Hidden and Vulnerable, then Mark 2 Stress")
 # 
-# x <- 
+# x <-
 #   process_countdowns(example_feature_names, example_feature_descriptions)
 
 # prelim countdown-processing functions ----------------------------------------
 count_countdown <- function(txt) {
-  find_ctdns <- stri_locate_all(str = tolower(txt), regex = "countdown\\s*\\(.+?\\)")[[1]]
+  poss_regex <- "countdown\\s*\\(.+?\\)|progress countdown\\s*\\(.+?\\)|countdown countdown\\s*\\(.+?\\)"
+  
+  find_ctdns <- stri_locate_all(str = tolower(txt), regex = poss_regex)[[1]]
   ctdn_ct <- ifelse(all(is.na(find_ctdns)), 0, nrow(find_ctdns))
   list(
     "txt" = txt,
@@ -37,17 +39,18 @@ typify_countdown <- function(count_countdown_output) {
     ctdn_typs <- 
       # need to process back-to-front, then reverse at the end so classifiers line up
       vapply(1:length(ctdn_txt), \(i) {
+
         prog <- grepl("progress countdown", tolower(ctdn_txt[i]))
         cnsq <- grepl("consequence countdown", tolower(ctdn_txt[i]))
         loop <- grepl("loop\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
         inc <- grepl("increasing\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
         dec <- grepl("decreasing\\s*[0-9]*d{0,1}[0-9]*", tolower(ctdn_txt[i]))
-        if (prog) {"Progress"
-        } else if (cnsq) {"Consequence"
-        } else if (loop) {"Loop"
-        } else if (inc) {"Increasing"
-        } else if (dec) {"Decreasing"
-        } else {"norm"}
+
+        typs <- c("Progress", "Consequence", "Loop", "Increasing", "Decreasing", "norm")
+        idxs <- c(prog, cnsq, loop, inc, dec, !any(prog, cnsq, loop, inc, dec))
+        
+        paste(typs[idxs], collapse = ".")
+
       }, character(1L))
   }
   
@@ -77,21 +80,29 @@ typify_countdown <- function(count_countdown_output) {
 }
 
 extract_ctdn_nbrs <- function(txt) {
-  val <-  sub(".+countdown\\s*\\((.+)\\)", "\\1", tolower(txt))
-  inc <- grepl("increasing", tolower(val)) ### THIS NEEDS WORK
+  val <-  sub("countdown\\s*\\((.+)\\)", "\\1", tolower(txt))
   
-  if (!grepl("[:alpha:]", val)) {
+  if (!grepl("[[:alpha:]]", val)) {
     nbr <- as.numeric(val)
   } else if (grepl("[0-9]*d[0-9]+", val)) {
+    plus_minus <- grepl("\\+|\\-", val)
+    if (plus_minus) {
+      plus <- sub("^.*(\\+\\s*[0-9]+).*$", "\\1", val) |> sub(pattern = "\\+", replacement = "") 
+      plus <- if (plus == val) {0} else {as.numeric(plus)}
+      minus <- sub("^.*(\\-\\s*[0-9]+).*$", "\\1", val) |> sub(pattern = "\\-", replacement = "") 
+      minus <- if (minus == val) {0} else {as.numeric(minus)}
+      add_mod <- plus - minus 
+    } else {add_mod <- 0}
+    
     dice <- stri_extract(val, regex = "[0-9]*d[0-9]+")
     d_ct <- if (!grepl("^[0-9]+.*$", dice)) {1} else {as.numeric(sub("^([0-9]+)d.*$", "\\1", dice))}
     d_sd <- as.numeric(sub("^.+d", "", dice))
-    nbr <- d_ct * d_sd
+    nbr <- d_ct * d_sd + add_mod
   } else {
     nbr <- as.numeric(gsub("[^0-9]", "", val))
   }
   
-  nbr + 5 * inc # add 5 to the number for buffer if an increasing countdown
+  max(nbr, 1) # just insurance against an entry issue
 }
 
 prep_markdown_countdowns <- function(feature_name, typify_countdown_types, extract_ctdn_nbrs_output) {
@@ -116,7 +127,9 @@ process_countdowns <- function(feat_names, feat_descs) {
     lapply(1:length(ctdn_typ), \(i) {
       if (!all(ctdn_typ[[i]]$typ == "none")) {
         vapply(1:length(ctdn_typ[[i]]$txt), \(j) {
-          extract_ctdn_nbrs(ctdn_typ[[i]]$txt[j])
+          # add 5 to the number for buffer if an increasing countdown
+          extract_ctdn_nbrs(ctdn_typ[[i]]$txt[j]) +
+            ifelse(grepl("Increasing", ctdn_typ[[i]]$typ[j]), 5, 0)
         }, numeric(1L))
       }
     })
@@ -140,11 +153,8 @@ process_countdowns <- function(feat_names, feat_descs) {
   
   daggerforge_ctdns <- vector("list", length(feat_descs))
   for (i in 1:length(ctdn_ct)) {
-    if (ctdn_ct[[i]]$ctdn_ct > 1) {
-      ###
-      ### NEEDS WORK: gsub WORKS, BUT NOT CURRENTLY ADDING MANUAL COUNTDOWNS DOWNSTREAM
-      ### ALSO: NEED TO APPLY WORKING FORM OF THIS FOR A SOLO INCREASING COUNTDOWN TOO
-      ###
+    if (any(ctdn_ct[[i]]$ctdn_ct > 1 | grepl("Increasing", unlist(ctdn_typ[[i]]$typ)))) {
+
       # abbreviate 'Countdown' or 'countdown' to 'Ctdown' or 'ctdown' so Daggerforge doesn't
       # auto-populate (only first) countdown for multi-countdown features
       # ..these will have processing-introduced countdowns
@@ -242,17 +252,14 @@ process_env_feats_df <- function(feat_list) {
   
   df_ <- 
     data.frame(
-      nm = feat_list$feat_names,#feat_names,
-      typ = feat_list$feat_types,#feat_types,
-      desc = feat_list$feat_processed_txt$df_fd,#feat_descs,
-      idx = feat_list$feat_typeidx,#feat_typidx
+      nm = feat_list$feat_names,
+      typ = feat_list$feat_types,
+      desc = feat_list$feat_processed_txt$df_fd,
+      idx = feat_list$feat_typeidx,
       qs = feat_list$feat_qs
     )
   
-  ###
-  ### EITHER HERE OR FURTHER DOWN NEEDS CORRECTION
-  ###
-  df_$countdown_nbrs <- lapply(1:nrow(df_), \(z){feat_list$feat_processed_txt$df_cd[[z]]})
+  countdowns <- feat_list$feat_processed_txt$df_cd[order(df_$idx)] |> unlist()
   
   df_ <- df_[order(df_$idx),]
   df_ <- df_[df_$idx > 0,]
@@ -276,18 +283,6 @@ process_env_feats_df <- function(feat_list) {
            } else {sub(paste0("^.+", df_$cost[z], "<*/*b*>*"), "", df_$desc[z])},
            "</div>")
   }, character(1L))
-  
-  countdowns <- lapply(1:nrow(df_), \(z) {
-    ctdn <- df_$countdown_nbrs[[z]]
-    
-    list_set <- 
-      if (!is.null(ctdn)) {
-        lapply(1:length(ctdn), \(y) {
-          c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
-        })
-      }
-    list_set
-  })
   
   df_$qstns <- lapply(1:nrow(df_), \(z) {
     if (nchar(df_$qs[z]) > 0) {
@@ -325,14 +320,14 @@ process_env_feats_df <- function(feat_list) {
   # note: these are only 'manually processed' countdowns for cases where 1+
   # features has 2+ countdowns
   daggerforge_countdowns <- 
-    if (!is.null(countdowns[[1]])) {
+    if (!is.null(countdowns)) {
       paste0(
         "\u0022countdowns\u0022: [\n",
         vapply(1:length(countdowns), \(z) {
           paste0(
             "\u0009{\n",
-            "\u0009\u0009\u0022", "name: \u0022", countdowns[[z]][["name"]], "\u0022,\n",
-            "\u0009\u0009\u0022", "max: ", countdowns[[z]][["max"]], "\n",
+            "\u0009\u0022", "name\u0022: \u0022", names(countdowns)[z], "\u0022,\n",
+            "\u0009\u0022", "max\u0022: ", unname(countdowns[z]), "\n",
             "\u0009}"
           )
         }, character(1L)) |> 
@@ -379,14 +374,14 @@ jsonify_env <- function(e_l) {
 }
 
 # ITS Theme (markdown) export processing =======================================
-markdownize_countdown <- function(countdown_name_max_vec_list) {
-  cnmvl <- countdown_name_max_vec_list
+markdownize_countdown <- function(countdown_name_max_vec) {
+  cnmvl <- countdown_name_max_vec
   
   if (length(cnmvl) > 0L) {
     cntdns <- 
       vapply(1:length(cnmvl), \(z){
-        paste0("> | ", cnmvl[[z]][["name"]], " | ", 
-               paste(rep("<input type = 'checkbox' unchecked/>", cnmvl[[z]][["max"]]), collapse = " "), " |")
+        paste0("> | ", names(cnmvl)[z], " | ", 
+               paste(rep("<input type = 'checkbox' unchecked/>", unname(cnmvl)[z]), collapse = " "), " |")
       }, character(1L)) |> paste(collapse = "\n") |> paste0("\n>\n")
     
     paste0("> ###### Countdowns\n",
@@ -422,6 +417,8 @@ process_env_feats_md <- function(feat_list) {
       qs = feat_list$feat_qs
     )
   
+  countdowns <- feat_list$feat_processed_txt$md_cd[order(df_$idx)] |> unlist()
+  
   df_$countdown_nbrs <- lapply(1:length(feat_list$md_cd), \(z) {feat_list$md_cd[[z]]})
   
   df_ <- df_[order(df_$idx),]
@@ -429,17 +426,6 @@ process_env_feats_md <- function(feat_list) {
   
   df_$feat <- paste0("***", df_$nm, " - ", df_$typ, ":*** ", df_$desc)
   
-  countdowns <- lapply(1:nrow(df_), \(z) {
-    ctdn <- df_$countdown_nbrs[[z]]
-    
-    list_set <- 
-      if (!is.null(ctdn)) {
-        lapply(1:length(ctdn), \(y) {
-          c("name" = names(ctdn)[y], "max" = unname(ctdn)[y])
-        })
-      }
-    list_set
-  }) 
   
   df_$qstns <- lapply(1:nrow(df_), \(z) {
     if (nchar(df_$qs[z]) > 0) {
@@ -470,3 +456,6 @@ markdownize_environment <- function(inpt, typ, num) {
          features_countdowns$countdowns,
          features_countdowns$features)
 }
+
+
+#When the party begins to act to prevent the execution, start a progress countdown (4) for the party's actions and a consequence countdown (1d4 + 2) in response to party failures or Fear expenditure to hasten the execution.

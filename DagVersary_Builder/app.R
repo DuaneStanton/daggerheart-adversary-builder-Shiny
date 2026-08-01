@@ -189,6 +189,7 @@ ui <- fluidPage(
                        div("Note: Updating the environment tier / type count will reset the entry fields; it's better to complete your work for in-progress evironments if you decide to change things.", style = "font-size: 16px; color: darkblue"),
                        selectInput("env_tier", "Select environment tier", choices = tier_vals, 
                                    selected = 1, multiple = FALSE, width = "180px"),
+                       uiOutput("env_dmg_note"),
                        tabsetPanel(
                          tabPanel(div("Counts by Type", style = "font-size: 16px; color: #e8d37d;"), 
                                   uiOutput("env_note1"),
@@ -704,9 +705,13 @@ server <- function(input, output, session) {
   })
   
   # server Environment Builder panel -------------------------------------------
+  output$env_dmg_note <- renderUI({
+    HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
+           "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>"))
+  })
+  
   output$env_notes <- renderUI({
-    div(HTML(paste0("Recommended damage range for this tier (for appropriate features): ",
-               "<b>", env_ref_df[env_ref_df$tier == input$env_tier, "dmg_rng"], "</b>",
+    div(HTML(paste0(
                "<br><h4>Feature elements to consider</h4>",
                "Environment features often involve one or more of the following:",
                "<br><i>h/t RightKnightToFight's guide - see 'Credits' tab</i>",
@@ -723,7 +728,8 @@ server <- function(input, output, session) {
                "<br><br>- Consider including descriptors like 'Progress' or 'Consequence' before 'Countdown'; this is especially important for a pursuit- or escape-type pair of countdowns to identify which countdown is which.",
                "<br>- When there are -multiple- countdowns in a single feature, the exported environment text for the Daggerforge JSON will intentionally replace the word 'Countdown' with 'Ctdown' as the JSON will create standalone countdown entries for the multiples; default Daggerforge processing may not capture both countdowns using the initial text and the 'intentional typo' will prevent the default processing from duplicating the countdowns.",
                "<br>- Note that because Daggerforge and ITS Theme countdown UI don't currently support automated increases to the counter maximum, an <i>increasing</i> countdown will have have 5 additional counter slots to provide some buffer counters.",
-               "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'.")),
+               "<br>- Countdowns will use the feature name as the countdown name; if there are multiple countdowns, 'Progress' and 'Consequence' will be added if those immediately precede 'Countdown'."
+               )),
         style = "font-size: 16px;")
   })
   
@@ -783,10 +789,24 @@ server <- function(input, output, session) {
         }) |> unlist(recursive = FALSE)
     })
   
+  # tracking feature text to ensure proper updates to export text --------------
+  env_feat_tracker <- reactive({
+    req(env_runset())
+    
+    vapply(1:length(env_runset()), \(i) {
+      vapply(1:5, \(j) {
+        paste0(input[[paste0(env_runset(), "_featname_", j)]],
+               input[[paste0(env_runset(), "_feattype_", j)]],
+               input[[paste0(env_runset(), "_feattext_", j)]],
+               input[[paste0(env_runset(), "_featquestion_", j)]])
+      }, character(1L)) |> paste(collapse = "__")
+    }, character(1L))
+  })
+  
   # server Environment Export panel --------------------------------------------
   # Obsidian - Daggerforge subpanel --------------------------------------------
   json_file_env <- reactive({
-    req(env_runset())
+    req(env_runset(), env_feat_tracker())
     
     lapply(1:length(env_runset()), \(i) {
       jsonify_environment(input, a.t(env_runset()[i]), a.n(env_runset()[i])) # note: a.t and a.n originally built for adveraries, but exact same structure/functionality works for enviroment details
