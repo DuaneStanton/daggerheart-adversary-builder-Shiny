@@ -1,15 +1,5 @@
 # code for Obsidian - Daggerforge and Obsidian - ITS Theme environments export
 
-# example_feature_names <- c("Thing The First", "Second Thing", "Three's The Charm", "Dark side of the fourth", "Five on it")
-# example_feature_descriptions <- c("Nothing to find in here",
-#                                   "Spend a Fear to initiate a Progress Countdown (4) and Consequence Countdown (5) and stuff",
-#                                   "Single countdown (loop 1d4) to spice things up",
-#                                   "A countdown (3) then a countdown(2) then a countdown (1)",
-#                                   "A test consequence countdown (increasing 2) to become Hidden and Vulnerable, then Mark 2 Stress")
-# 
-# x <-
-#   process_countdowns(example_feature_names, example_feature_descriptions)
-
 # prelim countdown-processing functions ----------------------------------------
 count_countdown <- function(txt) {
   poss_regex <- "countdown\\s*\\(.+?\\)|progress countdown\\s*\\(.+?\\)|countdown countdown\\s*\\(.+?\\)"
@@ -170,37 +160,7 @@ process_countdowns <- function(feat_names, feat_descs) {
 }
 
 
-###
-### RESUME HERE: FUNCTION TO PROCESS FEATURE COUNTDOWN TEXT
-### ANOTHER TO BOLD DAMAGE TEXT (#s) FOR MARKDOWN OUTPUT
-### -ALSO ADD COUNTDOWN FUNCTIONALITY FOR ADVERSARIES- <MARKDOWN ONLY>; DaggerForge ALREADY HANDLES THIS FROM FEATURE TEXT CONTEXT e.g. "Featname - Passive: Countdown (1d4)" WILL PROCESS FOR 1d4 ROLL TO GENERATE THE COUNTDOWN
-
-# COUNTDOWN TEXT FUNCTION: ID FEATURE NAME, NUMBER OF FEATURES IN THE DESCRIPTION TEXT,
-# AND IF ANY OF THE COUNTDOWNS HAVE NAMES
-# IF MULTIPLE COUNTDOWNS AND -NOT- NAMED, USE {feature name}_{countdown #} AS NAME
-# SPECIAL CASE: PROGRESS AND COUNTDOWN IN THE FEATURE DESC AND THOSE ARE IT
-# ...THEN NO '_#' SUFFIX
-
-
-# NOTE: IN DAGGERFORGE, 'countdown' JSON FIELD IS ONLY INCLUDED IF THERE IS A SPECIFIED COUNTDOWN FOR THE ENVIRONMENT
-# REFERENCE list_features_obsdn.dgrfrg / .obsdn (TOP OF RESPECTIVE CODE FILES)
-
-###
-### RESUME HERE; REFERENCE app.R LINE 342 AND RELATED FOR REFERENCE
-### NOTES:
-### - FOR NON-CHASE COUNTDOWN, USE Countdown (#) WORDING; CREATE CHECKBOX IN MARKDOWN FOR THIS
-### ...IN TEXT PROCESSING ACCOUNT FOR LOWERCASE POTENTIAL
-### ...SPECIAL CASE FOR Countdown (Loop #) ; NOTE THE LOOP NATURE AND OUTPUT MAX #
-### ...OTHER SPECIAL CASE Countdown (Loop 1d{#}) ; NOTE THE DICE NATURE AND OUTPUT MAX #
-###   AND OUTPUT CONTDOWNS FOR EACH WITH APPROPRIATE LABELS
-
 # Daggerforge export processing ================================================
-
-### TODO: MAKE SURE EXPORT UPDATES IF THE BUILDER CONTENT CHANGES
-
-###
-### NEED SOMETHING LIKE auto_feat_ct (list_features_obsdn.dgrfrg) TO FORCE UPDATES HERE
-###
 process_env_features <- function(inpt, typ, num) {
   # list Passives, then Actions, then Reactions...if feature text present
   
@@ -373,6 +333,7 @@ jsonify_env <- function(e_l) {
   )
 }
 
+
 # ITS Theme (markdown) export processing =======================================
 markdownize_countdown <- function(countdown_name_max_vec) {
   cnmvl <- countdown_name_max_vec
@@ -380,27 +341,28 @@ markdownize_countdown <- function(countdown_name_max_vec) {
   if (length(cnmvl) > 0L) {
     cntdns <- 
       vapply(1:length(cnmvl), \(z){
-        paste0("> | ", names(cnmvl)[z], " | ", 
+        paste0("> | ", sub(" norm$", "", names(cnmvl)[z]), " | ", 
                paste(rep("<input type = 'checkbox' unchecked/>", unname(cnmvl)[z]), collapse = " "), " |")
       }, character(1L)) |> paste(collapse = "\n") |> paste0("\n>\n")
     
-    paste0("> ###### Countdowns\n",
+    paste0("> ### Countdowns\n",
            "> | Name | Count |\n",
            "> |:-|:-|\n",
            cntdns)
   }
 }
 
-markdownize_features <- function(feature_df) {
-  paste0("> ###### Features",
+
+markdownize_features_env <- function(feature_df) {
+  paste0("> ### Features\n",
          vapply(1:nrow(feature_df), \(z) {
            paste0("> - ", feature_df$feat[z], "\n",
                   if (!is.null(feature_df$qstns[[z]])) {
                     vapply(1:length(feature_df$qstns[[z]]), \(y) {
                       paste0("> *", feature_df$qstns[[z]][y], "*\n")
-                    }, character(1L)) |> paste(collapse = "\n")
+                    }, character(1L)) |> paste(collapse = "")
                   })
-         }, character(1L)) |> paste(collapse = "\n>\n")
+         }, character(1L)) |> paste(collapse = ">\n")
          )
 }
 
@@ -410,25 +372,22 @@ process_env_feats_md <- function(feat_list) {
   
   df_ <- 
     data.frame(
-      nm = feat_list$feat_names,#feat_names,
-      typ = feat_list$feat_types,#feat_types,
-      desc = feat_list$feat_processed_txt$df_fd,#feat_descs,
-      idx = feat_list$feat_typeidx,#feat_typidx
+      nm = feat_list$feat_names,
+      typ = feat_list$feat_types,
+      desc = feat_list$feat_processed_txt$md_fd,
+      idx = feat_list$feat_typeidx,
       qs = feat_list$feat_qs
     )
   
   countdowns <- feat_list$feat_processed_txt$md_cd[order(df_$idx)] |> unlist()
-  
-  df_$countdown_nbrs <- lapply(1:length(feat_list$md_cd), \(z) {feat_list$md_cd[[z]]})
   
   df_ <- df_[order(df_$idx),]
   df_ <- df_[df_$idx > 0,]
   
   df_$feat <- paste0("***", df_$nm, " - ", df_$typ, ":*** ", df_$desc)
   
-  
   df_$qstns <- lapply(1:nrow(df_), \(z) {
-    if (nchar(df_$qs[z]) > 0) {
+    if (nchar(df_$qs[z]) > 0) {   #!is.na(df_$qs[z]) ) { #|| nchar(df_$qs[z]) > 0) {
       strsplit(df_$qs[z], split = "\\?")[[1]] |> 
         as.character() |> 
         paste0("?") |> 
@@ -437,7 +396,7 @@ process_env_feats_md <- function(feat_list) {
   })
   
   markdown_countdowns <- markdownize_countdown(countdowns)
-  markdown_features <- markdownize_features(df_)
+  markdown_features <- markdownize_features_env(df_)
   
   list("countdowns" = markdown_countdowns, "features" = markdown_features)
 }
@@ -454,8 +413,6 @@ markdownize_environment <- function(inpt, typ, num) {
          "> Difficulty: ", inpt[[namify(typ, num, "diff")]], "\n",
          "> Potential Adversaries: ", inpt[[namify(typ, num, "ptntl_adv")]], "\n",
          features_countdowns$countdowns,
-         features_countdowns$features)
+         features_countdowns$features,
+         "\n")
 }
-
-
-#When the party begins to act to prevent the execution, start a progress countdown (4) for the party's actions and a consequence countdown (1d4 + 2) in response to party failures or Fear expenditure to hasten the execution.

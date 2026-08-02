@@ -825,6 +825,27 @@ server <- function(input, output, session) {
   
   output$json_dl_prvw_env <- renderText({ json_file_env() })
   
+  # Obsidian - ITS Theme subpanel ----------------------------------------------
+  markdown_file_env <- reactive({
+    req(env_runset(), env_feat_tracker())
+    
+    lapply(1:length(env_runset()), \(i) {
+      markdownize_environment(input, a.t(env_runset()[i]), a.n(env_runset()[i])) # note: a.t and a.n originally built for adveraries, but exact same structure/functionality works for enviroment details
+    }) |> 
+      paste(collapse = "\n\n")
+  })
+  
+  output$markdown_dl_env <- downloadHandler(
+    filename = function() {
+      paste0("obsidian_markdown_env-", format(Sys.time(), "%d-%b-%Y %Hh %Mm %Z"), ".json")
+    },
+    content = function(file) {
+      cat(markdown_file_env(), file = file)
+    }
+  )
+  
+  output$mkdn_txt_dl_prvw_env <- renderText({ markdown_file_env() })
+  
   # server Credits panel -------------------------------------------------------
   output$sources <- 
     renderUI({
