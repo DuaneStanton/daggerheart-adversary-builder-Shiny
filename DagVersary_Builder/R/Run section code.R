@@ -275,13 +275,19 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, mini
     } else if (mult && mult_ == 0.5 && dice_ct %% 2 == 0) { # 1/2 multiplier and starting w/ even # dice: halve dice count
       dice_side <- dice_sd
       dice_count <- mult_ * dice_ct
-      dice_mod <- dice_md / 2 + val_mod
+      dice_mod <- ceiling(dice_md / 2) + val_mod
+      dice_mod <- ifelse(dice_mod <= -dice_count, 0, dice_mod) # ensure damage count can't go below 1
+      
       # other non-integer multiplier: add (mult_ > 1) or remove (mult_ < 1) dice count and/or tweak dice '+' modifier
       # keep option with expected value closest to {mult_ * original dice expected value}
     } else if (mult && mult_ > 1) { 
-      dice_eval_chk <- expand.grid(side = dice_sides[dice_sides >= dice_sd],
-                                   count = dice_ct + c(0, 1, 2),
-                                   dice_mod = unique(c(-dice_md, -1, 0, 1, dice_md)))
+      poss_dice_mod_ <- -5:5
+      
+      dice_eval_chk <- 
+        expand.grid(side = dice_sides[dice_sides >= dice_sd],
+                    count = dice_ct + c(0, 1, 2),
+                    dice_mod = poss_dice_mod_) |> 
+        filter(dice_mod > -count) # ensure minimum result is at least 1
       
       dice_eval_chk$val <-
         dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
@@ -292,9 +298,13 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, mini
       dice_count <- dice_eval_chk$count[best_dice]
       dice_mod <- dice_eval_chk$dice_mod[best_dice] + val_mod
     } else if (mult && mult_ < 1) {
-      dice_eval_chk <- expand.grid(side = dice_sides[dice_sides <= dice_sd],
-                                   count = (dice_ct - c(0, 1, 2))[(dice_ct - c(0, 1, 2)) >= 1],
-                                   dice_mod = unique(c(-dice_md, -1, 0, 1, dice_md)))
+      poss_dice_mod_ <- -5:5
+      
+      dice_eval_chk <- 
+        expand.grid(side = dice_sides[dice_sides <= dice_sd],
+                    count = (dice_ct - c(0, 1, 2))[(dice_ct - c(0, 1, 2)) >= 1],
+                    dice_mod = poss_dice_mod_[poss_dice_mod_ > dice_ct]) |> 
+        filter(dice_mod > -count) # ensure minimum result is at least 1
       
       dice_eval_chk$val <-
         dice_eval_chk$count * (1 + dice_eval_chk$side) / 2 + dice_eval_chk$dice_mod
@@ -308,6 +318,7 @@ prcs_nbr <- function(feat_det_txt, dice_dmg_txt, avg_dmg, custm_dice, tier, mini
       dice_side <- dice_sd
       dice_count <- dice_ct
       dice_mod <- dice_md + val_mod
+      if (dice_mod <= -dice_count) {dice_mod <- -(dice_count - 1)} # ensure minimum result is 1
     }
     
     dice_mod_txt <- if (dice_mod != 0){ifelse(dice_mod > 0, paste0("+", dice_mod), as.character(dice_mod))}
