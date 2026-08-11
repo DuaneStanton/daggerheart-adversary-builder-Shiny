@@ -45,7 +45,7 @@ numerify_env <- function(df_, tier, type, nbr, detail, lbltxt, valcol, divwd = "
 # build environment type count -------------------------------------------------
 build_env_count <- function(typ) {
   tags$div(class = "env-count-sel", title = env_types[[typ]],
-           numericInput(inputId = paste0(typ, "_count"), 
+           numericInput(inputId = paste0(typ, "_count.env"), 
                         label = paste0("# ", gsub("_", " ", typ), "s"),
                         value = 0, min = 0, step = 1),
            style="display:inline-block")

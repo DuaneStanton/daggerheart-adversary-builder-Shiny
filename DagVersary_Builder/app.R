@@ -202,16 +202,19 @@ ui <- fluidPage(
               tabPanel(div("Environment Export", style = "font-size: 16px; color: #e8d37d;"),
                        div(h4("Export created environment(s) as either a JSON or text file intended for use in Obsidian")),
                        tabsetPanel(
+                         type = "pills",
                          tabPanel(div("Obsidian - Daggerforge", style = "font-size: 16px; color: #e8d37d;"),
                                   div(h4("Download a JSON file from this tab to upload to Obsidian via the Daggerforge plugin if running environments there. You -may- need to close and reopen Obsidian after uploading to access newly-added environments, which will be available in the 'Custom' category of the 'Source' filter.")),
                                   downloadButton("json_dl_env", label = "Download JSON file for Daggerforge"),
                                   div(h4("The downloaded .json will look like the below:")),
+                                  div("Note: The field below will be fully blank until at least one environment has enough details input to render."),
                                   verbatimTextOutput(outputId = "json_dl_prvw_env")),
                          tabPanel(div("Obsidian - ITS Theme", style = "font-size: 16px; color: #e8d37d;"),
                                   div(h4("Download a text file from this tab to select all > copy > paste into Obsidian if running environments there and you have the ITS Theme set up.")),
                                   div(span("Note: you", style = "font-size: 16px;"), span(" can ", style = "color: blue; font-size: 16px;"), span("copy-paste this text into Obsidian without the ITS Theme applied, but the formatting looks much worse.", style = "font-size: 16px")),
                                   downloadButton("markdown_dl_env", label = "Download text file of Markdown for copy-pasting to Obsidian"),
                                   div(h4("The downloaded .txt file will look like the below:")),
+                                  div("Note: The field below will be fully blank until at least one environment has enough details input to render."),
                                   verbatimTextOutput(outputId = "mkdn_txt_dl_prvw_env")) )
                        ),
               tabPanel(div("Credits", style = "font-size: 16px; color: #e8d37d;"),
@@ -749,13 +752,13 @@ server <- function(input, output, session) {
   env_ct_vec <- reactive({
     lapply(seq_along(env_types), \(i) {
       validate(need(
-        is.integer(input[[paste0(names(env_types)[i], "_count")]]) &&
-          input[[paste0(names(env_types)[i], "_count")]] >= 0,
+        is.integer(input[[paste0(names(env_types)[i], "_count.env")]]) &&
+          input[[paste0(names(env_types)[i], "_count.env")]] >= 0,
         paste0(names(env_types)[i], " count input must be a single non-negative whole number. Use '0' for none.")
       ))
     })
     v <- vapply(seq_along(env_types), 
-                \(i){ input[[paste0(names(env_types)[i], "_count")]] },
+                \(i){ input[[paste0(names(env_types)[i], "_count.env")]] },
                 numeric(1L))
     names(v) <- names(env_types)
     v
