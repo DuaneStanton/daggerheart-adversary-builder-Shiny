@@ -1,8 +1,8 @@
 # DagVersary_Builder
-## Making it easier to make adversaries...and potentially run them
+## Making it easier to build and export adversaries and environments
 This is a locally-hostable Shiny app to set up and run adversaries for the Daggerheart TTRPG; while it requires a version of R installed on your computer and a handful of R packages to run (see the 'Running this App Locally' section under the 'App Structure' section), once you have a copy of the program on your computer it's yours to use at your leisure. 
 
-Users can select how many of each type of adversary they want (including colossal adversaries!) on the 'Start' tab, head tp 'Customize' to add specific details (including auto-populate some features), then either run an encounter using the 'Run' tab (e.g. adjust HP/Stress/conditions) OR output the customized stat blocks in a template that will work with either the Daggerforge plugin (one tab) or the Obsidian (ITS Theme) (another tab) to run encounters there.
+Users can select how many of each type of adversary they want (including colossal adversaries!) on the 'Start' tab, head to 'Customize' to add specific details (including auto-populate some features), then either run an encounter using the 'Run' tab (e.g. adjust HP/Stress/conditions) OR output the customized stat blocks in a template that will work with either the Daggerforge plugin (one tab) or the Obsidian (ITS Theme) (another tab) to run encounters there.
 
 This README covers the app's structure and launching the app locally from your computer.
 
@@ -29,9 +29,9 @@ Optionally run your encounter from here! Basic conditions and messages for empti
 
 ![Run tab](./README_images/app_Run.png)
 
-- This is more a 'bonus, potentially useful' feature than the main show - the next two tabs cover integration with Obsidian, which is probably a better program to use to run these adversaries - Obsidian is also a great note-taking app, so you'd be able to run adversaries in a given session's note rather than clicking between this program and your notes.
+- This is more a 'bonus, potentially useful' feature - the next tab covers exporting adversaries for use in the Obsidian application, which is probably a better program to use to run these adversaries. Obsidian is also a great note-taking app, so you'd be able to run adversaries in a given session's note rather than clicking between this program and your notes.
 
-### Obsidian - Daggerforge
+### Adversary Export: Obsidian - Daggerforge
 Export a JSON file to your Downloads folder to upload and run your custom adversaries using the Daggerforge plugin in Obsidian.
 
 ![Obsidian - Daggerforge tab](./README_images/app_ObsdnDaggerforge.png)
@@ -40,7 +40,7 @@ Export a JSON file to your Downloads folder to upload and run your custom advers
   
 - Once you've set up your adversaries in the Customize tab, you can click the 'Download JSON file for Daggerforge' to send a JSON file to your Downloads folder - you can directly upload this into Daggerforge if you have that plugin set up. The tab also shows a preview of what the JSON file will look like below the button.
 
-### Obsidian - ITS Theme Markdown
+### Adversary Export: Obsidian - ITS Theme Markdown
 Export a .txt file to your Downloads folder to copy-paste into your Obsidian vault with the ITS Theme plugin installed. While it _can_ also work in Obsidian without the plugin, the end result doesn't look great.
 
 ![Obsidian - ITS Theme tab](./README_images/app_ObsdnITSTheme.png)
@@ -56,17 +56,38 @@ See a listing of the available features per adversary (some are from the SRD, ot
 
 - As mentioned above, this tab also has notes beneath the Feature Table on including feature details the app can work with to have dyanmic features that can update to reflect the adverary or tier's values. As an example a feature with "<<1.5x dmg +3>>" in the feature description will replace that text with the combination of dice {count}d{sides} and the +/- modifier that gives an expected value close (or matching!) one-and-a-half times (plus three) the expected value of the adversary's 'standard attack' damage dice. If you selected 'Use Avg' for that adversary to use a fixed number for that damage, the text will be replaced with the calculated value, rounded up to the nearest whole number.
 
+### Environment Builder
+
+You can also create custom environments for export to Obsidian and use in either the Daggerforge plugin or in Obsidian with the ITS Theme.
+First specify the tier of interest in the 'Counts by Type' sub-tab, then add details in the 'Customize' sub-tab. You can optionally reference the 'Notes' sub-tab for environment elements to consider and notes for different countdown types and related wording to ensure the exported environments have good formatting.
+
+![Environment tab Count](./README_images/app_Env_Count.png)
+
+![Environment tab Customize](./README_images/app_Env_Customize.png)
+
+### Environment Export - Obsidian-Daggerforge and Obsidian-ITS Theme
+
+The same export options for Adversaries are available for Environments.
+
+![Environment Obsidian - Daggerforge tab](./README_images/app_Env_ObsdnDaggerforge.png)
+
+![Environment Obsidian - Daggerforge example](./README_images/example_Env_ObsidianDaggerforge.png)
+
+![Environment Obsidian - ITS Theme tab](./README_images/app_Env_ObsdnITSTheme.png)
+
+![Environment Obsidian - ITS Theme example](./README_images/example_Env_ObsidianITSTheme.png)
+
 ### Credits
 This app wouldn't have gone anywhere without the fantastic efforts of the following folks, also noted in the 'Credits' tab:
 
 - Darrington Press (naturally!) for creating Daggerheart and the SRD; as noted in the Credits tab, this application includes materials from the Daggerheart System Reference Document 1.0, © Critical Role, LLC. All rights reserved.
 
-- Starting values and recommended ranges for each adversary's numeric stats (Difficulty, Thresholds, HP, Stress, Attack modifier, Damage dice, and Average damage) come from RightKnighttoFight’s Guide to Making Custom Adversaries v1.6 [PLACEHOLDER: will link to it with their permission].
+- Starting values and recommended ranges for each adversary's numeric stats (Difficulty, Thresholds, HP, Stress, Attack modifier, Damage dice, and Average damage) come from RightKnighttoFight’s Guide to Making Custom Adversaries v1.6 ; the Credits tab links to the Heart of Daggers and Drive Thru RPG listings for this Guide.
 
 - A neat pair of features to dynamically move between Minions and Hordes (e.g. split out a Horde to create Minions, or merge Minions into a Horde) is heavily inspired by a Reddit post by user ThatZeroRed.
 
 ## Running this App Locally
-This app is hosted remotely via Posit Connect Cloud [PLACEHOLDER: LINK HERE ONCE SET UP], but using a free account that only supports 20 'active hours' (hours someone is using the app) per month. That said, this app is pretty lightweight (size on disk about 150 KB for my Windows PC) and can be run easily from your PC with no need for the remotely-hosted program.
+This app is [hosted remotely via Posit Connect Cloud](https://anutandastone-dagversary-builder.share.connect.posit.cloud/), but using a free account that only supports 20 'active hours' (hours someone is using the app) per month. That said, this app is pretty lightweight (size on disk about 150 KB for my Windows PC) and can be run easily from your PC with no need for the remotely-hosted program.
 
 ### Requirements to Run This App Locally (using only R)
 
