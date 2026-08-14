@@ -87,7 +87,7 @@ This app wouldn't have gone anywhere without the fantastic efforts of the follow
 - A neat pair of features to dynamically move between Minions and Hordes (e.g. split out a Horde to create Minions, or merge Minions into a Horde) is heavily inspired by a Reddit post by user ThatZeroRed.
 
 ## Running this App Locally
-This app is hosted remotely via Posit Connect Cloud [Link to Posit Cloud version of the app](https://anutandastone-dagversary-builder.share.connect.posit.cloud/), but using a free account that only supports 20 'active hours' (hours someone is using the app) per month. That said, this app is pretty lightweight (size on disk about 150 KB for my Windows PC) and can be run easily from your PC with no need for the remotely-hosted program.
+This app is [hosted remotely via Posit Connect Cloud](https://anutandastone-dagversary-builder.share.connect.posit.cloud/), but using a free account that only supports 20 'active hours' (hours someone is using the app) per month. That said, this app is pretty lightweight (size on disk about 150 KB for my Windows PC) and can be run easily from your PC with no need for the remotely-hosted program.
 
 ### Requirements to Run This App Locally (using only R)
 
