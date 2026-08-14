@@ -407,7 +407,7 @@ markdownize_environment <- function(inpt, typ, num) {
     process_env_feats_md()
   
   paste0("> [!infobox| background-purple wfull]+\n",
-         "> #", inpt[[namify(typ, num, "name")]], " (tier ", inpt[["env_tier"]], " ", typ, ")\n",
+         "> # ", inpt[[namify(typ, num, "name")]], " (tier ", inpt[["env_tier"]], " ", typ, ")\n",
          "> *", inpt[[namify(typ, num, "desc")]], "*\n",
          "> **Impulses:** ", inpt[[namify(typ, num, "impulses")]], "\n",
          "> Difficulty: ", inpt[[namify(typ, num, "diff")]], "\n",
