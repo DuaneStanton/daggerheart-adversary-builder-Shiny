@@ -306,7 +306,10 @@ jsonify_environment <- function(inpt, typ, num) {
   
   paste0("{\n",
          "\u0022id\u0022: \u0022", 
-         paste0("Dagversary_e", paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), collapse = "")),
+         paste0("Dagversary_e_",
+                format(Sys.time(), "%Y.%b.%d.%Hh%M"), "_",
+                paste(sample(c(letters, LETTERS, 0:9), size = 5, replace = TRUE), 
+                      collapse = "")),
          "\u0022,\n",
          "\u0022name\u0022: \u0022", inpt[[namify(typ, num, "name")]], "\u0022,\n",
          "\u0022tier\u0022: \u0022", inpt[["env_tier"]], "\u0022,\n",
