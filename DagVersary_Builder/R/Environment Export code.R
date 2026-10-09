@@ -209,6 +209,7 @@ process_env_features <- function(inpt, typ, num) {
 
 process_env_feats_df <- function(feat_list) {
   # ADD PRELIMINARY 'CHECK IF NOT FULLY EMPTY/NULL' HERE?
+  #if (is.null(process_env_feats_df)){stop("feat_list is empty")}
   
   df_ <- 
     data.frame(

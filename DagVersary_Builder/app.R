@@ -792,24 +792,43 @@ server <- function(input, output, session) {
         }) |> unlist(recursive = FALSE)
     })
   
+  # ensure each environment has at least one feature (name + description)
+  # before allowing export -----------------------------------------------------
+  env_dtl_check <- reactive({
+    req(env_runset())
+    lapply(1:length(active_env_ct_vec()), \(i) {
+      feat_ct <- 
+        sum(vapply(1:5, \(j) {
+          input[[paste0(env_runset()[i], "_featname_", j)]] != "" &
+          input[[paste0(env_runset()[i], "_feattext_", j)]] != ""
+          }, logical(1L)))
+      
+      validate(need(feat_ct > 0, 
+                    paste0("Environment ", env_runset()[i], 
+                           " needs at least one feature (name + description); check Environment Builder 'Customize' tab")))
+    })
+    
+    0L
+  })
+  
   # tracking feature text to ensure proper updates to export text --------------
   env_feat_tracker <- reactive({
-    req(env_runset())
+    req(env_runset(), env_dtl_check() == 0L)
     
     vapply(1:length(env_runset()), \(i) {
       vapply(1:5, \(j) {
-        paste0(input[[paste0(env_runset(), "_featname_", j)]],
-               input[[paste0(env_runset(), "_feattype_", j)]],
-               input[[paste0(env_runset(), "_feattext_", j)]],
-               input[[paste0(env_runset(), "_featquestion_", j)]])
+          paste0(input[[paste0(env_runset()[i], "_featname_", j)]],
+                 input[[paste0(env_runset()[i], "_feattype_", j)]],
+                 input[[paste0(env_runset()[i], "_feattext_", j)]],
+                 input[[paste0(env_runset()[i], "_featquestion_", j)]])
       }, character(1L)) |> paste(collapse = "__")
-    }, character(1L))
+    }, character(1L)) |> paste(collapse = "_._")
   })
   
   # server Environment Export panel --------------------------------------------
   # Obsidian - Daggerforge subpanel --------------------------------------------
   json_file_env <- reactive({
-    req(env_runset(), env_feat_tracker())
+    req(min(active_adv_ct_vec()) > 0, env_runset(), env_feat_tracker())
     
     lapply(1:length(env_runset()), \(i) {
       jsonify_environment(input, a.t(env_runset()[i]), a.n(env_runset()[i])) # note: a.t and a.n originally built for adveraries, but exact same structure/functionality works for enviroment details
@@ -826,7 +845,11 @@ server <- function(input, output, session) {
     }
   )
   
-  output$json_dl_prvw_env <- renderText({ json_file_env() })
+  output$json_dl_prvw_env <- 
+    renderText({
+      req(min(active_adv_ct_vec()) > 0)
+      json_file_env()
+      })
   
   # Obsidian - ITS Theme subpanel ----------------------------------------------
   markdown_file_env <- reactive({
@@ -847,7 +870,11 @@ server <- function(input, output, session) {
     }
   )
   
-  output$mkdn_txt_dl_prvw_env <- renderText({ markdown_file_env() })
+  output$mkdn_txt_dl_prvw_env <- 
+    renderText({
+      req(min(active_adv_ct_vec()) > 0)
+      markdown_file_env()
+    })
   
   # server Credits panel -------------------------------------------------------
   output$sources <- 
